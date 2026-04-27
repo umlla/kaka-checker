@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡卡查克 · 雪原冒险</title>
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --panel: #111827dd;
+            --border: #1e3a5f;
+            --text: #d0d8e8;
+            --text2: #94a3b8;
+            --accent: #5eb0e5;
+            --gold: #f0c060;
+            --rare: #7eb8da;
+            --legend: #f0b830;
+            --danger: #e05555;
+            --success: #5cb878;
+            --warm: #e89050;
+            --glow: #3a7bd5;
+            --snow: #c8ddf8;
+            --panel2: #141e2bdd;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px #00000055;
+            --transition: 0.25s ease;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
+            background-attachment: fixed;
+        }
+
+        .snowfall { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .snowflake { position: absolute; top: -60px; color: var(--snow); font-size: 1rem; animation: fall linear infinite; opacity: 0.7; text-shadow: 0 0 6px #b0d0f8; }
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            25% { transform: translateY(25vh) rotate(90deg) translateX(30px); opacity: 0.7; }
+            50% { transform: translateY(50vh) rotate(180deg) translateX(-20px); opacity: 0.5; }
+            75% { transform: translateY(75vh) rotate(270deg) translateX(25px); opacity: 0.4; }
+            100% { transform: translateY(105vh) rotate(360deg) translateX(-15px); opacity: 0.15; }
+        }
+
+        .app-container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+        .header { text-align: center; padding: 18px 10px 8px; z-index: 2; }
+        .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: 0.04em; background: linear-gradient(135deg, #d0e8ff, #7eb8da, #c0ddf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 2px; }
+        .header .subtitle { font-size: 0.85rem; color: var(--text2); }
+
+        .weather-tag { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: #1a3050; color: #b0d8f8; border: 1px solid #3a6088; white-space: nowrap; }
+
+        .btn { padding: 9px 18px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 0.88rem; border: none; transition: var(--transition); letter-spacing: 0.03em; white-space: nowrap; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px #3a7bd544; }
+        .btn-primary:hover { background: #6ec0f0; box-shadow: 0 4px 16px #3a7bd566; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--accent); color: #fff; }
+        .btn-sm { padding: 5px 12px; font-size: 0.78rem; border-radius: 16px; }
+        .btn-gold { background: linear-gradient(135deg, #c89030, #e0b050); color: #1a0e00; font-weight: 700; box-shadow: 0 2px 12px #e0b04044; }
+        .btn-gold:hover { box-shadow: 0 4px 20px #e0b04066; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+        .main-layout { display: flex; align-items: flex-start; gap: 16px; z-index: 2; margin-top: 8px; }
+        .sidebar { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; z-index: 2; }
+
+        .traveler-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: flex-start; background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; box-shadow: var(--shadow); backdrop-filter: blur(6px); margin: 0; }
+        .traveler-bar .stat { display: flex; align-items: center; gap: 3px; font-size: 0.75rem; white-space: nowrap; }
+        .traveler-bar .stat .icon { font-size: 1.0rem; }
+        .traveler-bar .stat .val { font-weight: 600; min-width: 24px; text-align: center; }
+        .stat-bar-wrap { width: 36px; height: 4px; background: #1a2535; border-radius: 3px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .fill-temp { background: linear-gradient(90deg, #4a90d9, #e89050); }
+        .fill-health { background: linear-gradient(90deg, #e05555, #5cb878); }
+        .fill-hunger { background: linear-gradient(90deg, #c09040, #f0c060); }
+        .fill-mood { background: linear-gradient(90deg, #7eb8da, #d0a0e0); }
+
+        .tab-nav { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .tab-btn { justify-content: flex-start; padding: 9px 12px; width: 100%; text-align: left; font-size: 0.82rem; border-radius: 22px; border: 1px solid transparent; cursor: pointer; font-weight: 500; background: var(--panel2); color: var(--text2); transition: var(--transition); white-space: nowrap; backdrop-filter: blur(4px); }
+        .tab-btn:hover { border-color: var(--border); color: var(--text); background: #1a2840dd; }
+        .tab-btn.active { background: #1e3a55dd; color: #fff; border-color: var(--accent); box-shadow: 0 0 12px #3a7bd544; }
+
+        .panel-area { flex: 1; height: 480px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(6px); min-width: 0; }
+
+        .panel { padding: 18px 20px; animation: fadeIn 0.35s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .panel h3 { font-size: 1.1rem; margin-bottom: 10px; color: #c8ddf8; display: flex; align-items: center; gap: 6px; }
+        .panel h3 .icon { font-size: 1.2rem; }
+
+        .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+        .input-row input { padding: 9px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #0d1520; color: var(--text); font-size: 0.9rem; outline: none; transition: var(--transition); flex: 1; min-width: 120px; }
+        .input-row input:focus { border-color: var(--accent); box-shadow: 0 0 8px #3a7bd533; }
+        .input-row input.dur-input { flex: 0 0 90px; min-width: 70px; }
+
+        .checkin-list { list-style: none; padding-right: 4px; }
+        .checkin-list li { padding: 7px 0; border-bottom: 1px solid #1a2a3a; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .checkin-list .task-name { color: #c8ddf8; flex: 1; }
+        .checkin-list .task-dur { color: var(--accent); font-weight: 600; white-space: nowrap; }
+        .checkin-list .task-time { color: var(--text2); font-size: 0.75rem; white-space: nowrap; }
+
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; padding-right: 4px; }
+        .card-item { background: #0d1520; border: 1px solid #2a3a50; border-radius: var(--radius-sm); padding: 12px; cursor: default; transition: var(--transition); position: relative; display: flex; flex-direction: column; }
+        .card-item:hover { border-color: #4a6a90; box-shadow: 0 2px 12px #00000044; }
+        .card-item.rare { border-color: #3a6a90; box-shadow: 0 0 10px #3a7bd522; }
+        .card-item.legend { border-color: #8a6a20; box-shadow: 0 0 16px #e0b04033; background: #141008; }
+        .card-item .card-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+        .card-item.rare .card-name { color: #8ec8f0; }
+        .card-item.legend .card-name { color: #f0c040; }
+        .card-item .card-desc { font-size: 0.75rem; color: var(--text2); line-height: 1.4; margin-bottom: 8px; flex: 1; }
+        .card-item .card-effects { font-size: 0.7rem; color: #b0c8d8; margin-bottom: 8px; }
+        .card-item .card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .badge-common { background: #2a3a50; color: #a0b0c0; }
+        .badge-rare { background: #1a3a50; color: #7eb8da; }
+        .badge-legend { background: #3a2a10; color: #f0c040; }
+
+        .adventure-event { background: #0d1520; border-left: 3px solid var(--accent); padding: 14px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 10px 0; line-height: 1.6; font-size: 0.9rem; color: #c8d8e8; }
+        .adventure-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--text2); }
+
+        .backpack-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
+        .backpack-list li { background: #1a2535; padding: 4px 10px; border-radius: 14px; font-size: 0.78rem; color: #b0c8d8; border: 1px solid #2a3a50; }
+
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; background: #1e3050; color: #fff; padding: 12px 24px; border-radius: 24px; font-weight: 600; font-size: 0.9rem; box-shadow: 0 8px 24px #00000066; animation: toastIn 0.35s ease, toastOut 0.4s ease 2.5s forwards; pointer-events: none; border: 1px solid #3a6088; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 2px; }
+
+        .tomato-display { font-size: 2.4rem; font-weight: 700; text-align: center; color: #f0c040; margin: 8px 0; font-variant-numeric: tabular-nums; }
+        .tomato-preset { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .tomato-preset .btn { font-size: 0.75rem; padding: 4px 10px; }
+        .tomato-custom { padding: 4px 6px; border-radius: 16px; border: 1px solid var(--border); background: #0d1520; color: var(--text); font-size: 0.75rem; width: 70px; text-align: center; }
+        .drop-log { margin-top: 10px; font-size: 0.75rem; color: #94a3b8; max-height: 120px; overflow-y: auto; }
+        .drop-log li { padding: 3px 0; border-bottom: 1px solid #1a2a3a; }
+
+        @media (max-width: 768px) {
+            .main-layout { flex-direction: column; gap: 10px; }
+            .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+            .traveler-bar { width: 100%; justify-content: flex-start; }
+            .tab-nav { flex-direction: row; flex-wrap: wrap; width: auto; }
+            .tab-btn { width: auto; padding: 8px 12px; font-size: 0.78rem; }
+            .panel-area { height: 400px; }
+            .card-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+            .input-row input.dur-input { flex: 0 0 60px; min-width: 50px; }
+            .header h1 { font-size: 1.4rem; }
+            .tomato-display { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="snowfall" id="snowfall"></div>
+<div id="toastContainer"></div>
+
+<div class="app-container">
+    <div class="header">
+        <h1>❄️ 卡卡查克 · 雪原冒险</h1>
+        <p class="subtitle">🏔️ 在冰原上留下你的足迹，与旅行者一同前行</p>
+    </div>
+
+    <div class="main-layout">
+        <div class="sidebar">
+            <div class="traveler-bar" id="travelerBar">
+                <span class="weather-tag" id="weatherTag">☁️ --</span>
+                <div class="stat"><span class="icon">🌡️</span><span class="val" id="tempVal">-10</span>°C
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-temp" id="tempBar" style="width:40%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">❤️</span><span class="val" id="healthVal">80</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-health" id="healthBar" style="width:80%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">🍞</span><span class="val" id="hungerVal">70</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-hunger" id="hungerBar" style="width:70%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">😊</span><span class="val" id="moodVal">60</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-mood" id="moodBar" style="width:60%"></div></div>
+                </div>
+            </div>
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="checkin">📝 打卡</button>
+                <button class="tab-btn" data-tab="adventure">🗺️ 冒险</button>
+                <button class="tab-btn" data-tab="backpack">🎒 背包</button>
+                <button class="tab-btn" data-tab="stats">📊 统计</button>
+            </div>
+        </div>
+        <div id="panelContainer" class="panel-area"></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ==================== 物品池定义 ====================
+        const CARD_POOL = {
+            "普通": [
+                ["企鹅蛋","一枚圆滚滚的雪原企鹅蛋，带着尚未消散的体温，未来或许能孵化出可靠的旅伴。","你小心翼翼地把企鹅蛋放在怀里，希望能孵化出一只小企鹅。","旅行者小心地把企鹅蛋裹进围巾里，轻声说了句谢谢。","support",{"hunger":10}],
+                ["冰晶碎片","阳光透过云层洒下，这块冰晶碎片折射出彩虹，据说是冰妖精嬉戏时遗落的玩具。","你将冰晶碎片举到眼前，阳光被分解成七彩光带，周围顿时多了几分梦幻。","旅行者接过冰晶碎片，对着光看了看，微笑着把它挂在背包上。","support",{"mood":5}],
+                ["保暖袜","用厚实的雪原牦牛绒织成，袜口绣着歪歪扭扭的\"探险快乐\"，是某位前辈留下的温暖祝福。","你穿上保暖袜，一股暖意从脚底升起，即使踩在雪地里也感觉不到太多寒意。","旅行者立刻套上保暖袜，跺了跺脚：\"这下踩冰河也不怕了，谢谢你！\"","warm",{"temp":5}],
+                ["雪原蘑菇","只在极夜过后的第一个黎明钻出地面，伞盖泛着淡蓝荧光，尝起来有薄荷和松针的味道。","你切下一小块蘑菇丢进嘴里，味道清凉带点辛辣，但很快一股暖流从胃里升起，驱散了寒冷。","旅行者感激地点点头，把蘑菇掰成小块，说正好可以煮一锅驱寒汤。","food",{"hunger":8,"health":3}],
+                ["冻原浆果","一串凝霜的深紫色小果，酸中带甜，是雪原旅人补充元气的天然点心。","你一把摘下几颗浆果放进嘴里，酸得你打了个哆嗦，但随之而来的甘甜让疲劳减轻了不少。","旅行者吃了一颗浆果，眼睛一亮：\"好甜！这下体力恢复了不少。\"","food",{"hunger":6,"health":2}],
+                ["冰钓竿","看似普通的钓竿，鱼线却织入了冰蚕丝，据说曾有人用它钓起过封在冰层里的古老秘密。","你在冰面上凿开一个洞，将钓竿伸进去，不一会儿线猛地一沉——你钓上了一条裹着冰晶的银鱼，看来今晚能加餐了。","旅行者挥舞着钓竿：\"这下不用愁食物了！\"随后对你行了个礼。","food",{"hunger":12}],
+                ["雪狐的脚印","一串逐渐消失在风中的脚印拓印，传说跟着它走，能发现雪狐埋藏的闪亮小玩意儿。","你循着脚印拓印的方向走了一小段，在雪堆下挖出了一枚亮晶晶的冰石头，虽然不值钱，但挺好看。","旅行者把脚印拓印收进背包，神秘一笑：\"说不定能带我去找到宝藏。\"","support",{"mood":8}],
+                ["融雪护符","一块刻有简易符文的木牌，能让方圆三步内的积雪加速融化，露营时再也不用抖帐篷了。","你将融雪护符插在地上，周围的雪果然开始快速融化，很快清理出一块干燥的空地，正好可以搭帐篷。","旅行者郑重地把护符挂在腰间：\"这玩意儿实用！\"","warm",{"temp":3,"mood":3}],
+                ["霜花书签","一枚永远保持冰晶形状的透明书签，夹在书页间会散发出清凉的草木香。","你翻开笔记本，将霜花书签夹进去，书页立刻染上一层淡淡的香气，连字迹都似乎更清晰了些。","旅行者把书签夹进自己随身的日记本里，轻声道：\"知识就是最好的保暖品。\"","support",{"mood":6}],
+                ["旅人热汤配方","手写的配方残页，用雪水、根茎和一点点运气就能煮出驱散严寒的金色热汤。","你照着配方收集了一些苔藓和块根，将雪水煮沸后丢进去，果然煮出了一锅金黄色的热汤。喝下去全身暖和。","旅行者如获至宝，立刻生火试着煮了一锅，边喝边感慨：\"这汤，暖到心窝了。\"","food",{"hunger":15,"health":8,"temp":5}],
+            ],
+            "稀有": [
+                ["极光披风","采集极光丝线织成的披风，白天如水般透明，夜晚会流淌着淡淡的绿与紫，穿上它仿佛能融进北极光。","你披上极光披风，身体似乎变轻了一点，在夜色中走动时，披风泛起幽光，为你照亮前路。","旅行者披上披风，整个人都仿佛隐形于极光之中，他感激地朝你挥手。","warm",{"temp":5,"mood":5}],
+                ["驯鹿铃","轻轻摇响，清脆的铃声穿透风雪，友善的驯鹿便会循声而来，愿意与你同行一程。","你摇了摇驯鹿铃，清脆的声音传出去很远。不久，一头温顺的驯鹿从雾中走来，愿意驮你一段路。","旅行者摇了摇铃铛，不一会儿果然有驯鹿靠近，他跨上鹿背：\"谢了，这下走得快多了！\"","support",{"mood":8,"health":5}],
+                ["雪原地图·残篇","标有一处神秘冰洞的模糊地图，边缘写着\"此地有远古回响\"，但另一半被撕去了。","你摊开地图，根据残存的标记往东走了一会儿，竟然真的发现了一个被冰封的洞口，不过另一半地图……也只能走到这里了。","旅行者仔细研究了地图，若有所思：\"或许我能找到另一半。\"","support",{"mood":10}],
+                ["冰洞密码","一行古老的符文，据说念对它，就能开启某座冰封洞穴的无形之门，听到久远的歌谣。","你对着冰壁念出那串符文，冰层缓缓裂开一道仅容一人通过的缝隙，里面传出悠远的古老旋律。你犹豫了一下，还是退了回来。","旅行者默默记下符文，轻声说：\"等需要的时候，我会用它。\"","support",{"mood":12}],
+                ["暴风雪护符","一枚由冰湖之心打磨的护符，佩戴时风雪会自动绕开你，不过偶尔也会引来好奇的雪精。","你将护符挂在脖子上，肆虐的暴风竟真的绕开了你的周围，形成一个无风的小小空间。一只透明的雪精好奇地在圈外探头探脑。","旅行者戴上护符，惊喜地看到风雪绕开他，连声道谢。","warm",{"temp":5,"health":5}],
+                ["远古冰芯","从千米冰层下取出的冰柱，里面封存着千年前的气泡，凑近听似乎能听到那个时代的风声。","你小心敲开冰芯一角，将耳朵贴上去，隐隐听到了来自遥远过去的风声和低语，历史的回响让人出神。","旅行者把冰芯贴到耳边，沉默许久：\"我听见了远古的声音…谢谢你让我分享这个。\"","support",{"mood":15}],
+                ["霜语者的笔记","半本被冻得硬邦邦的笔记，记载着与冰雪精灵沟通的简单词汇，学会一个词就能让睫毛不再结霜。","你翻开笔记，学会了第一个词：\"埃苏卡\"。刚一念出，睫毛上凝结的霜就化了，视线变得清晰。","旅行者认真地跟着念了几遍，抬头时睫毛上的霜已消失，他笑道：\"这太有用了！\"","support",{"health":5,"mood":8}],
+                ["雪鹿角冠","自然脱落的雪鹿角制成的头冠，戴上后能短暂听懂野生动物的闲聊，不过它们大多在吐槽天气。","你戴上角冠，周围的鸟鸣和兽吼突然变成了能听懂的语言。一只雪兔抱怨道：\"今天又降温了，我的胡萝卜都冻成石头了。\"","旅行者戴了一会儿，笑着摘下角冠：\"动物们的牢骚可真多。\"但他仍十分珍惜这份礼物。","support",{"mood":10}],
+                ["永霜火种","装在琉璃瓶中的一簇幽蓝火焰，不散发热量却能照亮黑暗，是雪原深处某个部族的圣物残片。","你拧开瓶盖，幽蓝的光芒立刻照亮了四周，虽然不温暖，但清晰的光线让你看清了远处的路标。","旅行者把瓶子挂在胸前，深夜赶路时有了照明，他朝你感激地鞠躬。","warm",{"temp":3,"mood":5,"health":3}],
+            ],
+            "传说": [
+                ["冰封王座","传说中的雪原之主曾使用的王座，寒气逼人。据说坐上它就能看见雪原过去的辉煌与未来的寂静。","你小心翼翼地坐上冰封王座，一瞬间，脑海中被无数画面淹没：伟大的极夜宫、繁荣的冰上集市……最后却是无尽的寂静。你回过神来，发现自己仍坐在原地。","旅行者抚摸着王座的扶手，眼含敬意：\"这份礼物太厚重了…我会记住的。\"","support",{"mood":20,"health":20}],
+                ["永恒极夜","能冻结时光的宝石，只在连续七天坚持后显现。将它握在掌心，你会感到时间像雪花一样缓慢飘落。","你握紧永恒极夜，周围的一切仿佛都变慢了，飘落的雪花定格在空中。你深吸一口气，珍惜这片刻的宁静。","旅行者捧着宝石，眼中映出极光：\"仿佛握住了永恒。\"","support",{"mood":25}],
+                ["冰霜巨人的心脏","一颗仍在缓慢跳动的冰蓝色心脏，每跳动一下，方圆百里的冰川就会裂开一道细微的缝隙。传说巨人只是在沉睡，等待真正的春天。","你将手放在心脏上，感受到微弱的跳动，仿佛整个雪原都随着它的节奏呼吸。你赶紧把手拿开，怕惊扰了沉睡的巨人。","旅行者小心翼翼地接过心脏，肃然道：\"我会守护它的脉搏。\"","medical",{"health":30}],
+                ["极地星辰之泪","一颗坠落在雪原深处的星核碎片，内部流淌着液态的星光。它会在最寒冷的夜里为你唱起星星的歌。","你轻轻触碰星辰之泪，它发出一阵柔和的星辉，同时一首空灵的歌谣在你耳边响起，仿佛整个宇宙都在抚慰你。","旅行者捧着星星碎片，泪光闪烁：\"这是我听过最美的歌。\"","support",{"mood":30}],
+                ["雪灵契约","一张用冰丝织成的古老卷轴，以永不融化的墨水写着：以你的名字交换，雪原将记住你的一切。签名处还空着。","你犹豫片刻，还是没有签下名字。但卷轴似乎感受到了你的心意，飘落下一片冰晶，落在你手中后融化了。仿佛雪原已经记住了你。","旅行者将卷轴贴身收好：\"这承诺太重，我需要认真考虑。\"","support",{"mood":20,"health":10}],
+                ["凛冬长笛","由远古冰髓雕刻而成的长笛，吹响时能召唤一场温柔的雪，也能让暴风雪瞬间平息。据说它的第一个音符是雪灵教的。","你吹响长笛，清澈的音符飘散开去，周围的风雪竟真的渐渐平息下来，一缕阳光从云缝中洒下，照在你身上。","旅行者接过长笛，轻轻吹出一个音符，风雪为之寂静，他点头致谢。","warm",{"temp":10,"mood":15}],
+                ["霜裔王冠","历代雪原守护者代代相传的王冠，佩戴后会浮现出历代守护者的虚影，在你耳边低语他们的经验与遗憾。","你戴上王冠，一个个模糊的透明身影出现在周围，他们轻声诉说着远古的誓言和未竟的旅程。你心中升起一股莫名的使命感。","旅行者单膝跪地，然后起身戴上王冠：\"我不会辜负这份传承。\"","support",{"health":20,"mood":20}],
+            ]
+        };
+
+        const DROP_POOL = {
+            "普通": [
+                ["干粮块", "一块压实的谷物与肉干，可快速补充体力。", "你嚼着干粮块，觉得体力恢复了不少。", "旅行者嚼着干粮块，朝你比了个拇指。", "food", {"hunger":10}],
+                ["火绒盒", "一个小小的防水火绒盒，在潮湿环境也能轻松生火。", "你擦亮火星，篝火燃起，周围暖和了许多。", "旅行者擦亮火星，篝火燃起，他感激地看了你一眼。", "warm", {"temp":3,"mood":3}],
+                ["绷带", "一卷干净的亚麻绷带，用以处理小伤口。", "你熟练地缠上绷带，感觉伤口好多了。", "旅行者熟练地缠上绷带，点头致谢。", "medical", {"health":5}],
+                ["暖石", "一块被篝火烤热的石头，用布包好可暖手数小时。", "你把暖石揣进怀里，舒服地叹了口气。", "旅行者把暖石揣进怀里，舒服地叹了口气。", "warm", {"temp":5}],
+            ],
+            "稀有": [
+                ["治疗药膏", "由冻原草药制成的药膏，能快速治愈冻伤。", "你涂上药膏，冻伤的手很快恢复血色。", "旅行者涂上药膏，冻伤的手很快恢复血色：\"帮大忙了！\"", "medical", {"health":15}],
+                ["指南针", "一个即使在极地磁场下也能稳定指向的古老指南针。", "你端详着指南针，微微一笑：终于不会迷路了。", "旅行者端详着指南针，微微一笑：\"终于不会迷路了。\"", "support", {"mood":8}],
+                ["保温睡袋", "用雪鸮绒填充的睡袋，能在-40°C环境中维持体温。", "你钻进睡袋，很快传来均匀的呼吸声。", "旅行者钻进睡袋，很快传来均匀的呼吸声。", "warm", {"temp":10,"health":5}],
+            ],
+            "传说": [
+                ["极地罗盘", "不仅能指方向，还会在靠近远古遗迹时微微发光的罗盘。", "你捧着罗盘，光芒跳动着指向远方，你深吸一口气：\"我感觉到命运在召唤。\"", "旅行者捧着罗盘，光芒跳动着指向远方，他深吸一口气：\"我感觉到命运在召唤。\"", "support", {"mood":15,"health":5}],
+                ["生命之水", "一小瓶传说能起死回生的冰泉之水，实际上只能大幅恢复生命力。", "你小心地喝下一口，苍白的脸立刻红润起来。\"简直奇迹。\"", "旅行者小心地喝下一口，苍白的脸立刻红润起来。\"简直奇迹。\"", "medical", {"health":25}],
+            ]
+        };
+
+        const UTC_OFFSET_HOURS = 8;
+        const ADVENTURE_REFRESH_SEC = 30 * 60;
+        const TICK_INTERVAL_MS = 8000;
+        const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
+        const EVENTS = [
+            "旅行者正与一头饥肠辘辘的雪原狼对峙，手中紧握着唯一的武器——一根冻得发硬的鱼干。",
+            "旅行者被卷入一场突如其来的白毛风中，他死死拽着驯鹿的缰绳，嘴里灌满了冰碴。",
+            "旅行者踩塌了冰层，半条腿陷入刺骨的河水，他挣扎着爬上来，却发现靴子冻成了冰坨子。",
+            "旅行者正在用冻僵的手指剥开一头冰原熊留下的痕迹，熊的脚印消失在雾里，他决定绕路。",
+            "旅行者遇到了一头暴躁的雪牦牛，它冲着旅行者刨雪示威，旅行者只好退着走，边走边唱走调的号子以表友好。",
+            "旅行者在一片冰谷里遭遇小型雪崩，他钻进一个冰洞躲过一劫，洞里竟然还有别人留下的半张毛毯。",
+            "旅行者正在尝试用最后一点火种煮一锅热汤，他不小心把靴垫掉进了锅里，汤头意外地鲜美。",
+            "旅行者找了个背风处升起篝火，正烤着捡来的冻蘑菇，香气引来两只好奇的雪狐远远观望。",
+            "旅行者在小屋废墟里找到一口破铁锅，他敲敲打打补好窟窿，打算炖一锅苔原野菜。",
+            "旅行者把冻硬的干粮贴在胸口捂软，自言自语道：这是最后的存粮了，明天必须找到补给。",
+            "旅行者发现了一座被冰封的石门，门上刻着一只巨大的眼睛，当他凝视时，眼睛似乎动了一下。",
+            "旅行者捡到了一枚还在发光的蓝色冰晶，握在手里能听见隐隐约约的歌声，像是从冰层深处传来。",
+            "旅行者跟着一串奇怪的螺旋脚印走了一刻钟，发现它们在一面光滑的冰壁前突然消失了。",
+            "旅行者遇见了一座从冰块里长出的巨型花朵，花瓣透明，滴落的露水落在地上立刻结成珍珠般的冰珠。",
+            "旅行者看见极光中垂下一条摇曳的光带，光带扫过雪地时，竟然短暂地映出了陌生的人影。",
+            "旅行者在旧营地里挖出一个封口的陶罐，里面装满干枯的种子，罐底刻着一行看不懂的古文字。",
+            "旅行者碰上一位同样独行的旅人，两人默默交换了一壶热酒和一张皱巴巴的地图，然后分道扬镳。",
+            "旅行者救起了一只翅膀结冰的雪鸮，雪鸮回过神来后，叼走了他仅存的半块肉干。",
+            "旅行者来到了一个雪原小集市，用一枚闪亮的冰晶换了一双新袜子，还听了一场关于冰龙的评书。",
+            "旅行者帮一位老猎人修理雪橇，老人感激地塞给他一块驯鹿奶酪，并告诉他前方有风暴。"
+        ];
+
+        function getLocalDate(ts = Date.now()) { const d = new Date(ts + UTC_OFFSET_HOURS*3600000); return d.toISOString().slice(0,10); }
+        function getToday() { return getLocalDate(); }
+        function getYesterday() { const d = new Date(Date.now() + UTC_OFFSET_HOURS*3600000 - 86400000); return d.toISOString().slice(0,10); }
+        function randInt(max) { return Math.floor(Math.random()*max); }
+        function randChoice(arr) { return arr[randInt(arr.length)]; }
+        function clamp(v,lo,hi) { return Math.max(lo, Math.min(hi, v)); }
+
+        const LS_KEYS = { userData:'kaka_user_data', traveler:'kaka_traveler_state', adventure:'kaka_adventure_state' };
+        function loadJSON(key, fallback) { try { const raw = localStorage.getItem(key); if (!raw) return fallback; const parsed = JSON.parse(raw); return parsed; } catch(e) { return fallback; } }
+        function saveJSON(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {} }
+
+        let userData = loadJSON(LS_KEYS.userData, {
+            checkins: {}, cards: [], lastDailyDraw: null, weeklyEggClaimed: null, dailyDropClaimed: null, log: []
+        });
+        userData.log = userData.log || [];
+        let travelerState = loadJSON(LS_KEYS.traveler, {
+            temperature: -10, health: 80, hunger: 70, mood: 60,
+            backpack: [], log: [], lastUpdate: Date.now() / 1000
+        });
+        travelerState.log = travelerState.log || [];
+        let adventureState = loadJSON(LS_KEYS.adventure, {
+            weather: '晴朗', event: '旅行者正在雪原上跋涉，四周一片寂静，只有风声相伴。', updatedAt: 0
+        });
+
+        function saveAll() {
+            saveJSON(LS_KEYS.userData, userData);
+            saveJSON(LS_KEYS.traveler, travelerState);
+            saveJSON(LS_KEYS.adventure, adventureState);
+        }
+
+        function addGlobalLog(text) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Shanghai'});
+            userData.log.push(`${timeStr} ${text}`);
+            if (userData.log.length > 50) userData.log = userData.log.slice(-50);
+            saveAll();
+        }
+
+        function getItemByName(name) {
+            for (const pool of Object.values(CARD_POOL)) for (const item of pool) if (item[0] === name) return item;
+            for (const pool of Object.values(DROP_POOL)) for (const item of pool) if (item[0] === name) return item;
+            return null;
+        }
+        function getCardUseInfo(name) {
+            const item = getItemByName(name);
+            return item ? { name: item[0], desc: item[1], useText: item[2], effects: item[5] } : null;
+        }
+        function getTravelerUseText(name) {
+            const item = getItemByName(name);
+            return item ? item[3] : null;
+        }
+        function getItemEffect(name) {
+            const item = getItemByName(name);
+            return item ? item[5] : null;
+        }
+        function getItemCategory(name) {
+            const item = getItemByName(name);
+            return item ? item[4] : null;
+        }
+        function getCardRarity(name) {
+            for (const [rarity, pool] of Object.entries(CARD_POOL)) for (const item of pool) if (item[0] === name) return rarity;
+            for (const [rarity, pool] of Object.entries(DROP_POOL)) for (const item of pool) if (item[0] === name) return rarity;
+            return '普通';
+        }
+        function getOwnedItemNames() {
+            const names = new Set(userData.cards.map(c => c[0]));
+            travelerState.backpack.forEach(([n]) => names.add(n));
+            return names;
+        }
+        function formatEffect(effects) {
+            const parts = [];
+            if (effects.hunger) parts.push(`+${effects.hunger}饱腹`);
+            if (effects.health) parts.push(`+${effects.health}健康`);
+            if (effects.temp) parts.push(`+${effects.temp}温度`);
+            if (effects.mood) parts.push(`+${effects.mood}心情`);
+            return parts.join(' ') || '无特殊效果';
+        }
+
+        function updateTravelerState(nowSec = Date.now()/1000) {
+            const elapsed = nowSec - (travelerState.lastUpdate || nowSec);
+            const hours = elapsed / 3600;
+            if (hours <= 0) return;
+            travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
+            travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
+            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
+            if (travelerState.hunger < 20) travelerState.health = Math.max(0, travelerState.health - hours * 4);
+            travelerState.temperature = clamp(travelerState.temperature, -30, 10);
+            travelerState.health = clamp(travelerState.health, 0, 100);
+            travelerState.hunger = clamp(travelerState.hunger, 0, 100);
+            travelerState.mood = clamp(travelerState.mood, 0, 100);
+            travelerState.lastUpdate = nowSec;
+        }
+
+        function applyEffect(effect) {
+            if (effect.health) travelerState.health = clamp(travelerState.health + effect.health, 0, 100);
+            if (effect.hunger) travelerState.hunger = clamp(travelerState.hunger + effect.hunger, 0, 100);
+            if (effect.mood) travelerState.mood = clamp(travelerState.mood + effect.mood, 0, 100);
+            if (effect.temp) travelerState.temperature = clamp(travelerState.temperature + effect.temp, -30, 10);
+        }
+
+        function autoUseBackpackItem() {
+            const bp = travelerState.backpack;
+            if (!bp.length) return null;
+            const needMap = [
+                { stat: 'hunger', threshold: 20, category: 'food' },
+                { stat: 'health', threshold: 30, category: 'medical' },
+                { stat: 'temperature', threshold: -15, category: 'warm' },
+                { stat: 'mood', threshold: 20, category: 'support' },
+            ];
+            for (const need of needMap) {
+                if (travelerState[need.stat] < need.threshold) {
+                    const idx = bp.findIndex(([name]) => getItemCategory(name) === need.category);
+                    if (idx !== -1) {
+                        const [itemName] = bp[idx];
+                        const effect = getItemEffect(itemName);
+                        if (effect) applyEffect(effect);
+                        const useText = getTravelerUseText(itemName) || '旅行者使用了物品。';
+                        const timeStr = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Shanghai'});
+                        travelerState.log.push(`${timeStr} ${useText}`);
+                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                        addGlobalLog(`旅行者使用了【${itemName}】`);
+                        bp.splice(idx, 1);
+                        return useText;
+                    }
+                }
+            }
+            return null;
+        }
+
+        function refreshAdventure() {
+            const nowSec = Date.now()/1000;
+            updateTravelerState(nowSec);
+            autoUseBackpackItem();
+            adventureState = { weather: randChoice(WEATHERS), event: randChoice(EVENTS), updatedAt: nowSec };
+            saveAll();
+        }
+
+        function addCheckin(task, duration) {
+            const today = getToday();
+            userData.checkins[today] = userData.checkins[today] || [];
+            userData.checkins[today].push({ timestamp: Math.floor(Date.now()/1000), task: task || '通用', done: true, duration: duration || null });
+            saveAll();
+        }
+
+        function clearTodayCheckins(taskName = null) {
+            const today = getToday();
+            if (!userData.checkins[today]) return 0;
+            if (taskName) {
+                const before = userData.checkins[today].length;
+                userData.checkins[today] = userData.checkins[today].filter(e => e.task !== taskName);
+                return before - userData.checkins[today].length;
+            } else {
+                const cnt = userData.checkins[today].length;
+                delete userData.checkins[today];
+                return cnt;
+            }
+        }
+
+        function calcStats(filterDate = null) {
+            const days = Object.keys(userData.checkins).sort();
+            if (!days.length) return { total: 0, streak: 0, tasks: {}, totalDurationToday: 0 };
+            const today = getToday(), yesterday = getYesterday();
+            const dateSet = new Set(days);
+            let streak = 0, d = yesterday;
+            while (dateSet.has(d)) { streak++; d = new Date(new Date(d+'T00:00:00+08:00').getTime()-86400000).toISOString().slice(0,10); }
+            if (dateSet.has(today)) streak++;
+            const tasks = {};
+            let totalDurationToday = 0;
+            const entries = filterDate ? (userData.checkins[filterDate] || []) : Object.values(userData.checkins).flat();
+            for (const e of entries) {
+                tasks[e.task] = tasks[e.task] || { count: 0, totalDuration: 0 };
+                tasks[e.task].count++;
+                if (e.duration != null) tasks[e.task].totalDuration += e.duration;
+            }
+            if (filterDate === getToday()) totalDurationToday = (userData.checkins[getToday()] || []).reduce((s,e) => s+(e.duration||0), 0);
+            return { total: days.length, streak, tasks, totalDurationToday };
+        }
+
+        function drawCard(ownedNames, preferRarity = null) {
+            const allAvailable = [];
+            for (const [rarity, pool] of Object.entries(CARD_POOL))
+                for (const item of pool) if (!ownedNames.has(item[0])) allAvailable.push({ name: item[0], desc: item[1], rarity });
+            if (!allAvailable.length) return null;
+            if (preferRarity && CARD_POOL[preferRarity]) {
+                const candidates = allAvailable.filter(c => c.rarity === preferRarity);
+                if (candidates.length) return randChoice(candidates);
+            }
+            return randChoice(allAvailable);
+        }
+
+        function drawByProbability(ownedNames) {
+            const r = Math.random();
+            const prefer = r >= 0.95 ? '传说' : r >= 0.7 ? '稀有' : '普通';
+            return drawCard(ownedNames, prefer);
+        }
+
+        function processDailyDraw() {
+            const today = getToday();
+            if (!(today in userData.checkins)) return null;
+            if (userData.lastDailyDraw === today && !userData.weeklyEggClaimed) return null;
+            const streak = calcStats().streak;
+            const ownedNames = getOwnedItemNames();
+            let card, isExtra = false;
+            if (streak >= 7 && userData.weeklyEggClaimed !== today) {
+                isExtra = true;
+                card = drawCard(ownedNames, '传说');
+                if (card) userData.weeklyEggClaimed = today;
+            } else {
+                card = drawByProbability(ownedNames);
+            }
+            if (card) {
+                userData.cards.push([card.name, card.desc]);
+                userData.lastDailyDraw = today;
+                addGlobalLog(`抽卡获得【${card.name}】`);
+                return { name: card.name, desc: card.desc, isExtra };
+            } else {
+                userData.lastDailyDraw = today;
+                return null;
+            }
+        }
+
+        function processDailyDrop() {
+            const today = getToday();
+            if (userData.dailyDropClaimed === today) return null;
+            const dur = calcStats(getToday()).totalDurationToday;
+            if (dur <= 0) return null;
+            const ownedNames = getOwnedItemNames();
+            let pool;
+            if (dur >= 120) pool = DROP_POOL['传说'];
+            else if (dur >= 60) pool = DROP_POOL['稀有'];
+            else pool = DROP_POOL['普通'];
+            const available = pool.filter(item => !ownedNames.has(item[0]));
+            if (!available.length) return null;
+            const drop = randChoice(available);
+            userData.cards.push([drop[0], drop[1]]);
+            userData.dailyDropClaimed = today;
+            addGlobalLog(`专注掉落【${drop[0]}】`);
+            return { name: drop[0], desc: drop[1] };
+        }
+
+        function giveToTraveler(cardName) {
+            if (travelerState.backpack.length >= 5) {
+                showToast('🎒 旅行者背包已满（最多5件），暂时无法接受新物品。');
+                return null;
+            }
+            const text = getTravelerUseText(cardName);
+            if (!text) return null;
+            travelerState.backpack.push([cardName, Date.now()/1000]);
+            travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
+            travelerState.hunger = clamp(travelerState.hunger + 5, 0, 100);
+            addGlobalLog(`赠送【${cardName}】给旅行者`);
+            saveAll();
+            return text;
+        }
+
+        function removeCardByName(cardName) {
+            const idx = userData.cards.findIndex(c => c[0] === cardName);
+            if (idx < 0) return false;
+            userData.cards.splice(idx, 1);
+            return true;
+        }
+
+        function showToast(msg, duration=2800) {
+            const container = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, duration+500);
+        }
+
+        // ==================== 番茄钟 ====================
+        let tomatoState = {
+            totalSeconds: 25*60, remainingSeconds: 25*60,
+            elapsedFocusSeconds: 0, status: 'idle',
+            intervalId: null, lastTickTime: null,
+            taskName: '番茄钟专注'
+        };
+        function formatTomatoTime(sec) {
+            const m = Math.floor(Math.max(0,sec)/60), s = Math.floor(Math.max(0,sec)%60);
+            return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+        }
+        function updateTomatoUI() {
+            const display = document.getElementById('tomatoDisplay');
+            const startBtn = document.getElementById('btnTomatoStart');
+            if (display) display.textContent = formatTomatoTime(tomatoState.remainingSeconds);
+            if (startBtn) {
+                if (tomatoState.status === 'running') { startBtn.textContent = '⏸ 暂停'; startBtn.className = 'btn btn-outline btn-sm'; }
+                else { startBtn.textContent = '▶ 开始'; startBtn.className = 'btn btn-primary btn-sm'; }
+            }
+            const stopBtn = document.getElementById('btnTomatoStop');
+            if (stopBtn) stopBtn.disabled = (tomatoState.status === 'idle');
+        }
+        function startTomato() {
+            if (tomatoState.status === 'running') { pauseTomato(); return; }
+            if (tomatoState.status === 'idle' || tomatoState.status === 'paused') {
+                tomatoState.status = 'running';
+                tomatoState.lastTickTime = Date.now();
+                if (!tomatoState.intervalId) tomatoState.intervalId = setInterval(tickTomato, 1000);
+                updateTomatoUI();
+            }
+        }
+        function pauseTomato() {
+            if (tomatoState.status === 'running') {
+                tomatoState.elapsedFocusSeconds += (Date.now() - tomatoState.lastTickTime)/1000;
+                tomatoState.status = 'paused';
+                updateTomatoUI();
+            }
+        }
+        function stopTomato(record = true) {
+            if (tomatoState.status === 'idle') return;
+            const now = Date.now();
+            if (tomatoState.status === 'running') tomatoState.elapsedFocusSeconds += (now - tomatoState.lastTickTime)/1000;
+            if (record && tomatoState.elapsedFocusSeconds >= 60) {
+                const minutes = Math.floor(tomatoState.elapsedFocusSeconds / 60);
+                addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
+                let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
+                if (minutes >= 15) {
+                    const count = Math.min(Math.floor(minutes / 30) + 1, 4);
+                    for (let i = 0; i < count; i++) {
+                        if (minutes < 45) msg += ' ' + dropInstantItem();
+                        else msg += ' ' + dropBackpackItem(minutes);
+                    }
+                }
+                showToast(msg, 4000);
+                saveAll();
+                renderPanel('checkin');
+                updateTravelerBar();
+            } else if (record && tomatoState.elapsedFocusSeconds < 60) {
+                showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
+            }
+            if (tomatoState.intervalId) { clearInterval(tomatoState.intervalId); tomatoState.intervalId = null; }
+            tomatoState.status = 'idle';
+            tomatoState.remainingSeconds = tomatoState.totalSeconds;
+            tomatoState.elapsedFocusSeconds = 0;
+            updateTomatoUI();
+        }
+        function tickTomato() {
+            if (tomatoState.status !== 'running') return;
+            const now = Date.now();
+            const delta = (now - tomatoState.lastTickTime)/1000;
+            tomatoState.lastTickTime = now;
+            tomatoState.remainingSeconds -= delta;
+            tomatoState.elapsedFocusSeconds += delta;
+            if (tomatoState.remainingSeconds <= 0) { tomatoState.remainingSeconds = 0; stopTomato(true); }
+            else updateTomatoUI();
+        }
+        function setTomatoPreset(minutes) {
+            if (tomatoState.status !== 'idle') return;
+            tomatoState.totalSeconds = minutes * 60;
+            tomatoState.remainingSeconds = minutes * 60;
+            updateTomatoUI();
+        }
+        function dropInstantItem() {
+            const ownedNames = getOwnedItemNames();
+            const available = DROP_POOL['普通'].filter(item => !ownedNames.has(item[0]));
+            if (!available.length) return '';
+            const item = randChoice(available);
+            const effect = item[5];
+            if (effect) applyEffect(effect);
+            addGlobalLog(`番茄钟即时使用【${item[0]}】`);
+            return `⚡ 旅行者使用了【${item[0]}】→ ${item[3]}`;
+        }
+        function dropBackpackItem(minutes) {
+            const ownedNames = getOwnedItemNames();
+            const extra = minutes - 45;
+            const legendProb = Math.min(0.1 + extra * 0.03, 0.6);
+            const rarity = Math.random() < legendProb ? '传说' : '稀有';
+            const pool = DROP_POOL[rarity];
+            const available = pool.filter(item => !ownedNames.has(item[0]));
+            if (!available.length) return '（无可掉落物品）';
+            const item = randChoice(available);
+            if (travelerState.backpack.length < 5) {
+                travelerState.backpack.push([item[0], Date.now()/1000]);
+                addGlobalLog(`番茄钟掉落【${item[0]}】放入背包`);
+                return `🎒 获得了【${item[0]}】（${rarity}），已放入旅行者背包。`;
+            } else {
+                return `🎒 背包已满，【${item[0]}】未能放入。`;
+            }
+        }
+
+        // ==================== UI ====================
+        function escHtml(s) { const d=document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        function updateTravelerBar() {
+            updateTravelerState(Date.now()/1000);
+            const t = travelerState;
+            document.getElementById('tempVal').textContent = Math.round(t.temperature);
+            document.getElementById('healthVal').textContent = Math.round(t.health);
+            document.getElementById('hungerVal').textContent = Math.round(t.hunger);
+            document.getElementById('moodVal').textContent = Math.round(t.mood);
+            document.getElementById('tempBar').style.width = ((t.temperature+30)/40*100)+'%';
+            document.getElementById('healthBar').style.width = t.health+'%';
+            document.getElementById('hungerBar').style.width = t.hunger+'%';
+            document.getElementById('moodBar').style.width = t.mood+'%';
+            document.getElementById('weatherTag').textContent = '☁️ ' + adventureState.weather;
+            saveAll();
+        }
+
+        function renderPanel(tabName) {
+            const container = document.getElementById('panelContainer');
+            updateTravelerState(Date.now()/1000);
+            let html = '';
+            try {
+                switch(tabName) {
+                    case 'checkin': html = renderCheckinPanel(); break;
+                    case 'adventure': html = renderAdventurePanel(); break;
+                    case 'backpack': html = renderBackpackPanel(); break;
+                    case 'stats': html = renderStatsPanel(); break;
+                }
+            } catch(e) {
+                console.error(e);
+                html = '<div class="panel"><p>⚠️ 界面加载出错，请刷新页面</p></div>';
+            }
+            container.innerHTML = html;
+            bindPanelEvents(tabName);
+            if (tabName === 'checkin') updateTomatoUI();
+        }
+
+        // ---------- 修改后的打卡面板：每行增加删除按钮，移除清除指定任务 ----------
+        function renderCheckinPanel() {
+            const today = getToday();
+            const todayCheckins = userData.checkins[today] || [];
+            const stats = calcStats(today);
+            let listHtml = '';
+            if (todayCheckins.length === 0) {
+                listHtml = '<li style="color:#94a3b8;padding:10px 0;">📭 今天还没有打卡记录，快来打卡吧！</li>';
+            } else {
+                for (let i = 0; i < todayCheckins.length; i++) {
+                    const e = todayCheckins[i];
+                    const timeStr = new Date(e.timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                    const durStr = e.duration ? `${e.duration}分钟` : '--';
+                    listHtml += `
+                        <li>
+                            <span class="task-name">✅ ${escHtml(e.task)}</span>
+                            <span class="task-dur">⏱ ${durStr}</span>
+                            <span class="task-time">${timeStr}</span>
+                            <button class="btn btn-outline btn-sm delete-task-btn" data-index="${i}" title="删除此条">✕</button>
+                        </li>`;
+                }
+            }
+            return `
+            <div class="panel">
+                <h3><span class="icon">📝</span> 每日打卡</h3>
+                <div class="input-row">
+                    <input type="text" id="taskInput" placeholder="任务名称（如：阅读、运动）" maxlength="60">
+                    <input type="number" id="durInput" class="dur-input" placeholder="分钟" min="0" max="600" value="">
+                    <button class="btn btn-primary" id="btnCheckin">✅ 打卡</button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                    <button class="btn btn-outline btn-sm" id="btnClearAll">🗑 清除今天全部</button>
+                </div>
+                <p style="font-size:0.82rem;color:#94a3b8;margin:4px 0;">
+                    📅 今日：<b>${todayCheckins.length}</b> 条打卡 | ⏱ 总专注：<b>${stats.totalDurationToday}</b> 分钟
+                    | 🔥 连续：<b>${stats.streak}</b> 天
+                </p>
+                <ul class="checkin-list">${listHtml}</ul>
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-gold btn-sm" id="btnDrawCard">🎴 抽卡（每日）</button>
+                    <span style="font-size:0.75rem;color:#94a3b8;align-self:center;">
+                        ${userData.lastDailyDraw === today ? '✅ 今日已抽卡' : '⬅ 打卡后可抽'}
+                        ${userData.dailyDropClaimed === today ? ' | 🎁 已掉落' : ''}
+                    </span>
+                </div>
+                <hr style="border-color:#1e3a5f;margin:15px 0 10px;">
+                <div style="display:flex; gap:12px;">
+                    <div style="flex:1;">
+                        <h4>🍅 番茄钟</h4>
+                        <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds)}</div>
+                        <div class="tomato-preset">
+                            <button class="btn btn-outline btn-sm preset-btn" data-min="15">15分</button>
+                            <button class="btn btn-outline btn-sm preset-btn" data-min="25">25分</button>
+                            <button class="btn btn-outline btn-sm preset-btn" data-min="30">30分</button>
+                            <button class="btn btn-outline btn-sm preset-btn" data-min="45">45分</button>
+                            <input type="number" id="tomatoCustomMin" class="tomato-custom" placeholder="自定义" min="1" max="120">
+                        </div>
+                        <div style="margin-top:8px;display:flex;gap:8px;">
+                            <button class="btn btn-primary btn-sm" id="btnTomatoStart">▶ 开始</button>
+                            <button class="btn btn-outline btn-sm" id="btnTomatoStop">⏹ 停止</button>
+                            <input type="text" id="tomatoTaskInput" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid #1e3a5f;background:#0d1520;color:#d0d8e8;font-size:0.78rem;">
+                        </div>
+                    </div>
+                    ${renderDropLog()}
+                </div>
+            </div>`;
+        }
+
+        function renderDropLog() {
+            const recentDrops = userData.log.filter(l => l.includes('掉落') || l.includes('获得')).slice(-4);
+            if (!recentDrops.length) return '';
+            let html = '<div class="drop-log"><strong>📦 近期掉落</strong><ul>';
+            recentDrops.forEach(l => html += `<li>${escHtml(l)}</li>`);
+            html += '</ul></div>';
+            return html;
+        }
+
+        function renderAdventurePanel() {
+            updateTravelerState(Date.now()/1000);
+            const report = getAdventureReport();
+            const t = report.traveler;
+            const updateTime = new Date(report.updatedAt*1000).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Shanghai'});
+            const remaining = Math.max(0, Math.ceil((ADVENTURE_REFRESH_SEC - (Date.now()/1000 - report.updatedAt))/60));
+            let bpHtml = t.backpack.length ? '<ul class="backpack-list">' + t.backpack.map(([n])=>`<li>🎒 ${escHtml(n)}</li>`).join('') + '</ul>' : '（空）';
+            let logHtml = '';
+            if (t.log && t.log.length) {
+                logHtml = '<div style="margin-top:10px;"><span style="font-size:0.8rem;color:#94a3b8;">📜 旅行者日志：</span><ul class="checkin-list">';
+                for (const entry of t.log.slice(-5)) logHtml += `<li style="font-size:0.75rem;">${escHtml(entry)}</li>`;
+                logHtml += '</ul></div>';
+            }
+            return `
+            <div class="panel">
+                <h3><span class="icon">🗺️</span> 雪原冒险报告</h3>
+                <div class="adventure-meta">
+                    <span class="weather-tag">☁️ ${escHtml(report.weather)}</span>
+                    <span>🕒 ${updateTime}</span>
+                    <span>⏳ 刷新倒计时：${remaining} 分钟</span>
+                </div>
+                <div class="adventure-event">🚶 ${escHtml(report.event)}</div>
+                <div>🌡️温度:<b>${Math.round(t.temperature)}°C</b> ❤️健康:<b>${Math.round(t.health)}</b> 🍞饱腹:<b>${Math.round(t.hunger)}</b> 😊心情:<b>${Math.round(t.mood)}</b></div>
+                <div>🎒 背包：${bpHtml}</div>
+                ${logHtml}
+            </div>`;
+        }
+
+        function renderBackpackPanel() {
+            const cards = userData.cards || [];
+            let cardsHtml = '';
+            if (cards.length) {
+                cardsHtml = '<div class="card-grid">';
+                for (let i=0; i<cards.length; i++) {
+                    const [name, desc] = cards[i];
+                    const item = getItemByName(name);
+                    const rarity = getCardRarity(name);
+                    const cls = rarity==='传说' ? 'legend' : rarity==='稀有' ? 'rare' : '';
+                    const badge = rarity==='传说' ? 'badge-legend' : rarity==='稀有' ? 'badge-rare' : 'badge-common';
+                    const effects = item ? item[5] : {};
+                    const effectStr = formatEffect(effects);
+                    cardsHtml += `
+                    <div class="card-item ${cls}">
+                        <span class="badge ${badge}">${rarity}</span>
+                        <div class="card-name">${escHtml(name)}</div>
+                        <div class="card-desc">${escHtml(desc)}</div>
+                        <div class="card-effects">${effectStr}</div>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm use-card-btn" data-name="${escHtml(name)}">🗑 使用</button>
+                            <button class="btn btn-success btn-sm give-card-btn" data-name="${escHtml(name)}">🎁 赠送</button>
+                        </div>
+                    </div>`;
+                }
+                cardsHtml += '</div>';
+            } else {
+                cardsHtml = '<p style="color:#94a3b8;">你的背包空空如也。</p>';
+            }
+            let globalLogHtml = '';
+            if (userData.log && userData.log.length) {
+                globalLogHtml = '<div style="margin-top:15px;"><strong>📖 最近事件</strong><ul class="checkin-list" style="max-height:120px; overflow-y:auto;">';
+                userData.log.slice(-8).forEach(l => globalLogHtml += `<li style="font-size:0.75rem;">${escHtml(l)}</li>`);
+                globalLogHtml += '</ul></div>';
+            }
+            return `
+            <div class="panel">
+                <h3><span class="icon">🎒</span> 我的背包 (${cards.length}件)</h3>
+                ${cardsHtml}
+                ${globalLogHtml}
+            </div>`;
+        }
+
+        function renderStatsPanel() {
+            const stats = calcStats();
+            let tasksHtml = '';
+            const entries = Object.entries(stats.tasks);
+            if (entries.length) {
+                tasksHtml = '<ul class="checkin-list">';
+                for (const [name, s] of entries) {
+                    let durStr = '';
+                    if (s.totalDuration) { const h=Math.floor(s.totalDuration/60), m=s.totalDuration%60; durStr = h>0 ? `${h}小时${m}分钟` : `${m}分钟`; }
+                    tasksHtml += `<li><span class="task-name">· ${escHtml(name)}：${s.count}次</span><span class="task-dur">${durStr}</span></li>`;
+                }
+                tasksHtml += '</ul>';
+            } else tasksHtml = '<p>暂无任务记录。</p>';
+            const todayDur = (userData.checkins[getToday()]||[]).reduce((s,e)=>s+(e.duration||0),0);
+            return `
+            <div class="panel">
+                <h3><span class="icon">📊</span> 历史统计</h3>
+                <p>📅 总打卡天数：<b>${stats.total}</b> | 🔥 连续：<b>${stats.streak}</b> | ⏱ 今日专注：<b>${todayDur}</b> 分钟</p>
+                ${tasksHtml}
+                ${stats.streak>=7 ? '<p style="color:#f0c040;">🌟 连续一周打卡达成！</p>' : ''}
+            </div>`;
+        }
+
+        function bindPanelEvents(tabName) {
+            if (tabName === 'checkin') {
+                document.getElementById('btnCheckin')?.addEventListener('click', ()=>{
+                    const task = document.getElementById('taskInput').value.trim();
+                    if (!task) { showToast('⚠️ 请输入任务名称'); return; }
+                    const dur = document.getElementById('durInput').value ? parseInt(document.getElementById('durInput').value) : null;
+                    addCheckin(task, dur);
+                    document.getElementById('taskInput').value = '';
+                    document.getElementById('durInput').value = '';
+                    showToast('✅ 打卡成功！');
+                    renderPanel('checkin');
+                    updateTravelerBar();
+                });
+                document.getElementById('btnClearAll')?.addEventListener('click', ()=>{
+                    clearTodayCheckins();
+                    saveAll();
+                    showToast('✅ 已清除今天全部记录');
+                    renderPanel('checkin');
+                });
+                document.getElementById('btnDrawCard')?.addEventListener('click', ()=>{
+                    const result = processDailyDraw();
+                    if (!result) { showToast('今天已抽卡或无打卡'); return; }
+                    showToast(`${result.isExtra?'🌈':'🎴'} 获得【${result.name}】`, 3500);
+                    const drop = processDailyDrop();
+                    if (drop) showToast(`🎁 专注掉落【${drop.name}】`, 3500);
+                    saveAll();
+                    renderPanel('checkin');
+                    updateTravelerBar();
+                });
+                // 单条删除按钮事件
+                document.querySelectorAll('.delete-task-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        const today = getToday();
+                        if (userData.checkins[today]) {
+                            userData.checkins[today].splice(index, 1);
+                            if (userData.checkins[today].length === 0) delete userData.checkins[today];
+                            saveAll();
+                            showToast('🗑️ 已删除该记录');
+                            renderPanel('checkin');
+                            updateTravelerBar();
+                        }
+                    });
+                });
+                // 番茄钟按钮
+                document.querySelectorAll('.preset-btn').forEach(b => b.addEventListener('click', ()=> setTomatoPreset(parseInt(b.dataset.min))));
+                document.getElementById('tomatoCustomMin')?.addEventListener('change', function(){ const v=parseInt(this.value); if(v>0){ setTomatoPreset(v); this.value=''; } });
+                document.getElementById('btnTomatoStart')?.addEventListener('click', startTomato);
+                document.getElementById('btnTomatoStop')?.addEventListener('click', ()=> stopTomato(true));
+                document.getElementById('tomatoTaskInput')?.addEventListener('input', function(){ tomatoState.taskName = this.value.trim() || '番茄钟专注'; });
+            }
+            if (tabName === 'backpack') {
+                document.querySelectorAll('.use-card-btn').forEach(b => b.addEventListener('click', ()=>{
+                    const name = b.dataset.name;
+                    const info = getCardUseInfo(name);
+                    if (!info) return;
+                    if (!removeCardByName(name)) return;
+                    addGlobalLog(`使用了【${name}】`);
+                    saveAll();
+                    showToast(`🗑️ ${info.useText}`);
+                    renderPanel('backpack');
+                    updateTravelerBar();
+                }));
+                document.querySelectorAll('.give-card-btn').forEach(b => b.addEventListener('click', ()=>{
+                    const name = b.dataset.name;
+                    const thanks = giveToTraveler(name);
+                    if (!thanks) return;
+                    if (!removeCardByName(name)) return;
+                    saveAll();
+                    showToast(`🎁 赠送成功！${thanks}`);
+                    renderPanel('backpack');
+                    updateTravelerBar();
+                }));
+            }
+        }
+
+        function getAdventureReport() {
+            const nowSec = Date.now()/1000;
+            updateTravelerState(nowSec);
+            if (!adventureState.updatedAt || nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) refreshAdventure();
+            return { weather: adventureState.weather, event: adventureState.event, updatedAt: adventureState.updatedAt, traveler: {...travelerState} };
+        }
+
+        function initSnowfall() {
+            const container = document.getElementById('snowfall');
+            const flakes = ['❄','❅','❆','✦','•','·'];
+            for (let i=0; i<40; i++) {
+                const span = document.createElement('span');
+                span.className = 'snowflake';
+                span.textContent = randChoice(flakes);
+                span.style.left = Math.random()*100+'%';
+                span.style.fontSize = (0.5+Math.random()*1.2)+'rem';
+                span.style.animationDuration = (6+Math.random()*14)+'s';
+                span.style.animationDelay = Math.random()*12+'s';
+                container.appendChild(span);
+            }
+        }
+
+        function initTabs() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(bb => bb.classList.remove('active'));
+                this.classList.add('active');
+                renderPanel(this.dataset.tab);
+            }));
+        }
+
+        function startTickers() {
+            setInterval(updateTravelerBar, TICK_INTERVAL_MS);
+            setInterval(() => {
+                const nowSec = Date.now()/1000;
+                if (adventureState.updatedAt && nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) refreshAdventure();
+                updateTravelerState(nowSec);
+                saveAll();
+            }, 30000);
+        }
+
+        function init() {
+            updateTravelerState(Date.now()/1000);
+            saveAll();
+            initSnowfall();
+            initTabs();
+            startTickers();
+            renderPanel('checkin');
+            updateTravelerBar();
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+        window.addEventListener('beforeunload', ()=>{ updateTravelerState(Date.now()/1000); saveAll(); });
+    })();
+</script>
+</body>
+</html>
