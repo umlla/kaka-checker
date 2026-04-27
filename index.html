@@ -953,7 +953,7 @@
                     }
                 });
                 document.getElementById('btnTomatoStart')?.addEventListener('click', startTomato);
-                document.getElementById('btnTomatoStop')?.addEventListener('click', () => stopTomato(false));
+                document.getElementById('btnTomatoStop')?.addEventListener('click', () => stopTomato(true));
                 document.getElementById('tomatoTaskInput')?.addEventListener('input', function() {
                     tomatoState.taskName = this.value.trim() || '番茄钟专注';
                 });
