@@ -15,7 +15,7 @@
 ## 🚀 快速开始
 
 ### 在线使用
-直接访问：`https://你的用户名.github.io/kaka-checker`
+直接访问：`https://umlla.github.io/kaka-checker`
 
 
 ## 🎮 玩法指南
