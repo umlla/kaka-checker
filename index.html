@@ -249,6 +249,37 @@
                 ["生命之水", "一小瓶传说能起死回生的冰泉之水。", "你举起小瓶对着光，液体里流动着细小的金点，你轻轻晃了晃，光点聚成漩涡。", "旅行者小心翼翼地喝下一小口，苍白的脸立刻红润起来，他惊讶地看着瓶子，又小心地盖好。", "medical", {"health":25}],
             ]
         };
+        const THANKS_POOL = {
+            food: [
+                "“太及时了！我肚子正咕咕叫呢。”旅行者眼睛一亮。",
+                "“这个能吃好久，谢谢你！”他小心地收进行囊。",
+                "旅行者闻了闻，露出满意的微笑：“是家乡的味道。”",
+                "“你总是知道我需要什么。”他拍了拍你的肩膀。",
+            ],
+            warm: [
+                "“这下能扛过今晚的暴风雪了。”旅行者裹紧大衣。",
+                "“暖和多了！”他朝手心哈了口气，不再发抖。",
+                "旅行者把物品贴近胸口：“雪原的夜不会难熬了。”",
+                "“再来一阵暴风雪也不怕了。”他用力点了点头。",
+            ],
+            medical: [
+                "旅行者轻叹一声：“伤口没那么疼了…多谢。”",
+                "“你救了我一命。”他郑重地把药收好。",
+                "“有了这个，还能继续赶路。”他活动了一下受伤的手臂。",
+                "“在这冰原上，健康比什么都重要。”他感激地看着你。",
+            ],
+            support: [
+                "旅行者小心地收好：“这份心意，我收下了。”",
+                "“这东西…好像在发光。”他喃喃道，眼里多了些神采。",
+                "“和你同行真是太好了。”他把礼物举过头顶对着极光看。",
+                "旅行者珍重地点点头：“我不会忘记你的帮助。”",
+            ],
+            default: [
+                "旅行者收下了，朝你露出一个腼腆的微笑。",
+                "“谢谢，在这雪原上每一份馈赠都格外珍贵。”他轻声说。",
+                "“我会好好使用它的。”旅行者拍了拍你的手背。",
+            ]
+        };
 
         // ==================== 全局配置与工具 ====================
         const UTC_OFFSET_HOURS = 8;
@@ -781,10 +812,18 @@
                 showToast('🎒 旅行者背包已满（最多10件），暂时无法接受新物品。');
                 return null;
             }
-            const thanks = getTravelerUseText(name);
-            if (!thanks) return null;
+            // 获取物品使用文本（仍用于日志）
+            const useText = getTravelerUseText(name);
+            if (!useText) return null;
             if (!removeUserItem(name, 1)) return null;
+            
             travelerState.backpack.push([name, Date.now() / 1000]);
+            
+            // 根据分类随机选择感谢语
+            const category = getItemCategory(name) || 'default';
+            const pool = THANKS_POOL[category] || THANKS_POOL.default;
+            const thanks = pool[Math.floor(Math.random() * pool.length)];
+            
             saveAll();
             return `旅行者收下了${name}，${thanks}`;
         }
