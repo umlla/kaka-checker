@@ -76,7 +76,7 @@
         .tab-btn:hover { border-color: var(--border); color: var(--text); background: #1a2840dd; }
         .tab-btn.active { background: #1e3a55dd; color: #fff; border-color: var(--accent); box-shadow: 0 0 12px #3a7bd544; }
 
-        .panel-area { flex: 1; height: 480px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(6px); min-width: 0; }
+        .panel-area { flex: 1; height: 560px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(6px); min-width: 0; }
 
         .panel { padding: 18px 20px; animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -138,7 +138,7 @@
             .stat-bar-wrap { width: 40px; }
             .tab-nav { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 6px; }
             .tab-btn { width: auto; flex: 1 0 auto; padding: 10px 8px; font-size: 0.8rem; text-align: center; }
-            .panel-area { height: calc(100vh - 340px); min-height: 350px; width: 100%; }
+            .panel-area { height: calc(100vh - 300px); min-height: 400px; width: 100%; }
             .panel { padding: 14px 12px; }
             .input-row { flex-direction: column; gap: 8px; }
             .input-row input { width: 100%; }
@@ -454,7 +454,32 @@
                 return cnt;
             }
         }
+        // 根据时间戳删除单条打卡记录
+        function removeCheckinByTimestamp(timestamp) {
+            const today = getToday();
+            if (!userData.checkins[today]) return false;
+            const before = userData.checkins[today].length;
+            userData.checkins[today] = userData.checkins[today].filter(e => e.timestamp !== timestamp);
+            const changed = userData.checkins[today].length < before;
+            if (changed) {
+                if (userData.checkins[today].length === 0) delete userData.checkins[today];
+                saveAll();
+            }
+            return changed;
+        }
 
+        // 更新指定记录的任务名称
+        function updateCheckinTask(timestamp, newTask) {
+            const today = getToday();
+            if (!userData.checkins[today]) return false;
+            const entry = userData.checkins[today].find(e => e.timestamp === timestamp);
+            if (entry) {
+                entry.task = newTask;
+                saveAll();
+                return true;
+            }
+            return false;
+        }
         function calcStats(filterDate = null) {
             const days = Object.keys(userData.checkins).sort();
             if (!days.length) return { total: 0, streak: 0, tasks: {}, totalDurationToday: 0 };
@@ -561,18 +586,37 @@
             status: 'idle',
             intervalId: null,
             lastTickTime: null,
-            taskName: '番茄钟专注'
+            taskName: '番茄钟专注',
+            mode: 'countdown'  // 新增：'countdown' 倒计时 / 'stopwatch' 正计时
         };
 
-        function formatTomatoTime(sec) {
-            const m = Math.floor(Math.max(0, sec) / 60), s = Math.floor(Math.max(0, sec) % 60);
-            return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        function formatTomatoTime(sec, mode) {
+            if (mode === 'stopwatch') {
+                // 正计时：显示已用时间 MM:SS
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60);
+                return '+' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            } else {
+                // 倒计时：显示剩余时间
+                const m = Math.floor(Math.max(0, sec) / 60);
+                const s = Math.floor(Math.max(0, sec) % 60);
+                return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
         }
 
         function updateTomatoUI() {
             const display = document.getElementById('tomatoDisplay');
             const startBtn = document.getElementById('btnTomatoStart');
-            if (display) display.textContent = formatTomatoTime(tomatoState.remainingSeconds);
+            const modeBtn = document.getElementById('btnTomatoMode');
+            
+            if (display) {
+                if (tomatoState.mode === 'stopwatch') {
+                    display.textContent = formatTomatoTime(tomatoState.elapsedFocusSeconds, 'stopwatch');
+                } else {
+                    display.textContent = formatTomatoTime(tomatoState.remainingSeconds, 'countdown');
+                }
+            }
+            
             if (startBtn) {
                 if (tomatoState.status === 'running') {
                     startBtn.textContent = '⏸ 暂停';
@@ -582,16 +626,30 @@
                     startBtn.className = 'btn btn-primary btn-sm';
                 }
             }
+            
+            if (modeBtn) {
+                modeBtn.textContent = tomatoState.mode === 'countdown' ? '⏱ 正计时' : '⏳ 倒计时';
+            }
+            
             const stopBtn = document.getElementById('btnTomatoStop');
             if (stopBtn) stopBtn.disabled = (tomatoState.status === 'idle');
         }
 
         function startTomato() {
-            if (tomatoState.status === 'running') { pauseTomato(); return; }
+            if (tomatoState.status === 'running') {
+                pauseTomato();
+                return;
+            }
             if (tomatoState.status === 'idle' || tomatoState.status === 'paused') {
                 tomatoState.status = 'running';
                 tomatoState.lastTickTime = Date.now();
-                if (!tomatoState.intervalId) tomatoState.intervalId = setInterval(tickTomato, 1000);
+                
+                // 正计时模式：不设置倒计时，从0开始累积
+                // 倒计时模式：已有 totalSeconds 和 remainingSeconds
+                
+                if (!tomatoState.intervalId) {
+                    tomatoState.intervalId = setInterval(tickTomato, 1000);
+                }
                 updateTomatoUI();
             }
         }
@@ -607,11 +665,17 @@
         function stopTomato(record = true) {
             if (tomatoState.status === 'idle') return;
             const now = Date.now();
-            if (tomatoState.status === 'running') tomatoState.elapsedFocusSeconds += (now - tomatoState.lastTickTime) / 1000;
+            if (tomatoState.status === 'running') {
+                tomatoState.elapsedFocusSeconds += (now - tomatoState.lastTickTime) / 1000;
+            }
+            
             if (record && tomatoState.elapsedFocusSeconds >= 60) {
                 const minutes = Math.floor(tomatoState.elapsedFocusSeconds / 60);
                 addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
+                
+                lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
+                
                 if (minutes >= 15) {
                     const drops = Math.min(Math.floor(minutes / 30) + 1, 4);
                     for (let i = 0; i < drops; i++) {
@@ -621,6 +685,7 @@
                             if (commonPool.length > 0) {
                                 const item = randChoice(commonPool);
                                 addUserItem(item[0], item[1], 1);
+                                lastTomatoDrops.push(`普通 · ${item[0]} x1`);
                                 msg += ` 🎒 获得【${item[0]}】x1`;
                             }
                         } else {
@@ -631,6 +696,7 @@
                             if (pool.length > 0) {
                                 const item = randChoice(pool);
                                 addUserItem(item[0], item[1], 1);
+                                lastTomatoDrops.push(`${rarity} · ${item[0]}`);
                                 msg += ` 🎒 获得【${item[0]}】（${rarity}）`;
                             } else {
                                 msg += ' （掉落池已空）';
@@ -645,9 +711,13 @@
             } else if (record && tomatoState.elapsedFocusSeconds < 60) {
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
-            if (tomatoState.intervalId) { clearInterval(tomatoState.intervalId); tomatoState.intervalId = null; }
+            
+            if (tomatoState.intervalId) {
+                clearInterval(tomatoState.intervalId);
+                tomatoState.intervalId = null;
+            }
+            
             tomatoState.status = 'idle';
-            tomatoState.remainingSeconds = tomatoState.totalSeconds;
             tomatoState.elapsedFocusSeconds = 0;
             updateTomatoUI();
         }
@@ -657,20 +727,43 @@
             const now = Date.now();
             const delta = (now - tomatoState.lastTickTime) / 1000;
             tomatoState.lastTickTime = now;
-            tomatoState.remainingSeconds -= delta;
-            tomatoState.elapsedFocusSeconds += delta;
-            if (tomatoState.remainingSeconds <= 0) {
-                tomatoState.remainingSeconds = 0;
-                stopTomato(true);
+            
+            if (tomatoState.mode === 'stopwatch') {
+                // 正计时：只增加已用时间，不设上限
+                tomatoState.elapsedFocusSeconds += delta;
             } else {
-                updateTomatoUI();
+                // 倒计时：减少剩余时间，到0自动结束
+                tomatoState.remainingSeconds -= delta;
+                tomatoState.elapsedFocusSeconds += delta;
+                if (tomatoState.remainingSeconds <= 0) {
+                    tomatoState.remainingSeconds = 0;
+                    stopTomato(true);
+                    return;
+                }
             }
+            updateTomatoUI();
         }
 
         function setTomatoPreset(minutes) {
             if (tomatoState.status !== 'idle') return;
             tomatoState.totalSeconds = minutes * 60;
             tomatoState.remainingSeconds = minutes * 60;
+            tomatoState.mode = 'countdown';  // 预设时长默认使用倒计时
+            updateTomatoUI();
+        }
+        function toggleTomatoMode() {
+            if (tomatoState.status !== 'idle') return;  // 只在空闲时可切换
+            tomatoState.mode = tomatoState.mode === 'countdown' ? 'stopwatch' : 'countdown';
+            
+            if (tomatoState.mode === 'stopwatch') {
+                // 切换到正计时：清零已用时间，不设倒计时
+                tomatoState.elapsedFocusSeconds = 0;
+                tomatoState.remainingSeconds = 0;
+            } else {
+                // 切换到倒计时：恢复预设时长
+                tomatoState.remainingSeconds = tomatoState.totalSeconds;
+                tomatoState.elapsedFocusSeconds = 0;
+            }
             updateTomatoUI();
         }
 
@@ -777,21 +870,35 @@
             const todayCheckins = userData.checkins[today] || [];
             const stats = calcStats(today);
             let listHtml = '';
-            if (!todayCheckins.length) {
-                listHtml = '<li style="color:#94a3b8;padding:10px 0;">📭 今天还没有打卡记录，快来打卡吧！</li>';
-            } else {
+            if (todayCheckins.length > 0) {
                 for (const e of todayCheckins) {
                     const timeStr = new Date(e.timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                     const durStr = e.duration ? `${e.duration}分钟` : '--';
-                    listHtml += `<li>
-                        <span class="task-name">✅ ${escHtml(e.task)}</span>
+                    listHtml += `
+                    <li>
+                        <span class="task-name editable-task" data-timestamp="${e.timestamp}" title="点击修改任务名">✏️ ${escHtml(e.task)}</span>
                         <span class="task-dur">⏱ ${durStr}</span>
                         <span class="task-time">${timeStr}</span>
+                        <button class="btn-delete-checkin" data-timestamp="${e.timestamp}" style="background:none;border:none;color:#e05555;cursor:pointer;font-size:1rem;padding:0 4px;" title="删除此记录">✕</button>
                     </li>`;
                 }
             }
+            // 滚动区域内容
+            const scrollContent = todayCheckins.length > 0
+                ? `<ul class="checkin-list">${listHtml}</ul>`
+                : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem;">📭 今天还没有打卡记录，快来打卡吧！</div>`;
+            // 番茄钟掉落记录
+            let dropLogHtml = '';
+            if (typeof lastTomatoDrops !== 'undefined' && lastTomatoDrops.length > 0) {
+                dropLogHtml = '<div class="tomato-drop-log"><h4>📦 本次番茄钟掉落</h4><ul class="checkin-list">';
+                for (const drop of lastTomatoDrops) {
+                    dropLogHtml += `<li style="font-size:0.8rem;">· ${drop}</li>`;
+                }
+                dropLogHtml += '</ul></div>';
+            }
+
             return `
-            <div class="panel">
+            <div class="panel" style="display:flex;flex-direction:column;height:100%;">
                 <h3><span class="icon">📝</span> 每日打卡</h3>
                 <div class="input-row">
                     <input type="text" id="taskInput" placeholder="任务名称（如：阅读、运动）" maxlength="60">
@@ -800,22 +907,29 @@
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
                     <button class="btn btn-outline btn-sm" id="btnClearAll">🗑 清除今天全部</button>
-                    <input type="text" id="clearTaskInput" placeholder="清除指定任务名" style="flex:1;min-width:100px;padding:5px 10px;border-radius:16px;border:1px solid #1e3a5f;background:#0d1520;color:#d0d8e8;font-size:0.78rem;">
-                    <button class="btn btn-outline btn-sm" id="btnClearTask">清除</button>
                 </div>
                 <p style="font-size:0.82rem;color:#94a3b8;margin:4px 0;">
                     📅 今日：<b>${todayCheckins.length}</b> 条打卡 | ⏱ 总专注：<b>${stats.totalDurationToday}</b> 分钟 | 🔥 连续：<b>${stats.streak}</b> 天
                 </p>
-                <ul class="checkin-list">${listHtml}</ul>
-                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+
+                <!-- 打卡列表滚动区 -->
+                <div style="flex:1;overflow-y:auto;min-height:0;margin-bottom:12px;">
+                    ${scrollContent}
+                </div>
+
+                <!-- 抽卡按钮 -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
                     <button class="btn btn-gold btn-sm" id="btnDrawCard">🎴 抽卡（每日）</button>
                     <span style="font-size:0.75rem;color:#94a3b8;align-self:center;">
                         ${userData.lastDailyDraw === today ? '✅ 今日已抽卡' : '⬅ 打卡后可抽'}
                         ${userData.dailyDropClaimed === today ? ' | 🎁 已掉落' : ''}
                     </span>
                 </div>
-                <hr style="border-color:#1e3a5f;margin:15px 0 10px;">
-                <div class="tomato-section">
+
+                <hr style="border-color:#1e3a5f;margin:0 0 10px 0;">
+
+                <!-- 番茄钟（固定在底部） -->
+                <div class="tomato-section" style="flex-shrink:0;">
                     <h4 style="margin:0 0 4px;color:#c8ddf8;">🍅 番茄钟</h4>
                     <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds)}</div>
                     <div class="tomato-preset">
@@ -828,8 +942,10 @@
                     <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
                         <button class="btn btn-primary btn-sm" id="btnTomatoStart">▶ 开始</button>
                         <button class="btn btn-outline btn-sm" id="btnTomatoStop">⏹ 停止</button>
+                        <button class="btn btn-outline btn-sm" id="btnTomatoMode">⏱ 正计时</button>
                         <input type="text" id="tomatoTaskInput" placeholder="任务名" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid #1e3a5f;background:#0d1520;color:#d0d8e8;font-size:0.78rem;">
                     </div>
+                    ${dropLogHtml}
                 </div>
             </div>`;
         }
@@ -943,28 +1059,90 @@
                 document.getElementById('btnCheckin')?.addEventListener('click', () => {
                     const task = document.getElementById('taskInput').value.trim();
                     if (!task) { showToast('⚠️ 请输入任务名称'); return; }
-                    const dur = document.getElementById('durInput').value ? parseInt(document.getElementById('durInput').value) : null;
+                    let dur = document.getElementById('durInput').value ? parseInt(document.getElementById('durInput').value) : null;
+                    let wasTrimmed = false;
+                    if (dur !== null && dur > 600) {
+                        dur = 600;
+                        wasTrimmed = true;
+                    }
                     addCheckin(task, dur);
                     document.getElementById('taskInput').value = '';
                     document.getElementById('durInput').value = '';
-                    showToast('✅ 打卡成功！');
+                    if (wasTrimmed) {
+                        showToast('⚠️ 单次打卡时长已自动调整为600分钟（上限）。', 3000);
+                    } else {
+                        showToast('✅ 打卡成功！');
+                    }
                     renderPanel('checkin');
                     updateTravelerBar();
                 });
+
                 document.getElementById('btnClearAll')?.addEventListener('click', () => {
                     const cnt = clearTodayCheckins();
                     saveAll();
                     showToast(cnt > 0 ? `✅ 已清除今天 ${cnt} 条记录` : '📅 今天还没有打卡记录');
                     renderPanel('checkin');
                 });
-                document.getElementById('btnClearTask')?.addEventListener('click', () => {
-                    const taskName = document.getElementById('clearTaskInput').value.trim();
-                    if (!taskName) { showToast('⚠️ 请输入要清除的任务名'); return; }
-                    const cnt = clearTodayCheckins(taskName);
-                    saveAll();
-                    showToast(cnt > 0 ? `✅ 已清除任务「${taskName}」的 ${cnt} 条记录` : `❌ 没有找到任务「${taskName}」`);
-                    document.getElementById('clearTaskInput').value = '';
-                    renderPanel('checkin');
+
+                // 删除单条记录
+                document.querySelectorAll('.btn-delete-checkin').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const ts = parseInt(btn.dataset.timestamp);
+                        if (removeCheckinByTimestamp(ts)) {
+                            showToast('🗑️ 记录已删除');
+                            renderPanel('checkin');
+                            updateTravelerBar();
+                        }
+                    });
+                });
+
+                // 编辑任务名
+                document.querySelectorAll('.editable-task').forEach(span => {
+                    span.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const ts = parseInt(this.dataset.timestamp);
+                        const currentText = this.textContent.replace('✏️ ', '').trim();
+
+                        // 创建输入框
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentText;
+                        input.style.width = '80%';
+                        input.style.padding = '2px 6px';
+                        input.style.borderRadius = '4px';
+                        input.style.border = '1px solid #5eb0e5';
+                        input.style.background = '#0d1520';
+                        input.style.color = '#d0d8e8';
+                        input.style.fontSize = '0.85rem';
+
+                        // 替换 span 为 input
+                        this.replaceWith(input);
+                        input.focus();
+                        input.select();
+
+                        const save = () => {
+                            const newTask = input.value.trim();
+                            if (newTask && newTask !== currentText) {
+                                updateCheckinTask(ts, newTask);
+                                showToast('✏️ 任务名已更新');
+                            }
+                            // 重新渲染面板
+                            renderPanel('checkin');
+                            updateTravelerBar();
+                        };
+
+                        input.addEventListener('blur', save);
+                        input.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                input.blur();
+                            } else if (e.key === 'Escape') {
+                                input.value = currentText;
+                                input.blur();
+                            }
+                        });
+                    });
                 });
                 document.getElementById('btnDrawCard')?.addEventListener('click', () => {
                     updateTravelerState(Date.now()/1000);
