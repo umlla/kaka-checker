@@ -608,7 +608,7 @@
             const display = document.getElementById('tomatoDisplay');
             const startBtn = document.getElementById('btnTomatoStart');
             const modeBtn = document.getElementById('btnTomatoMode');
-            
+
             if (display) {
                 if (tomatoState.mode === 'stopwatch') {
                     display.textContent = formatTomatoTime(tomatoState.elapsedFocusSeconds, 'stopwatch');
@@ -616,7 +616,7 @@
                     display.textContent = formatTomatoTime(tomatoState.remainingSeconds, 'countdown');
                 }
             }
-            
+
             if (startBtn) {
                 if (tomatoState.status === 'running') {
                     startBtn.textContent = '⏸ 暂停';
@@ -626,11 +626,11 @@
                     startBtn.className = 'btn btn-primary btn-sm';
                 }
             }
-            
+
             if (modeBtn) {
                 modeBtn.textContent = tomatoState.mode === 'countdown' ? '⏱ 正计时' : '⏳ 倒计时';
             }
-            
+
             const stopBtn = document.getElementById('btnTomatoStop');
             if (stopBtn) stopBtn.disabled = (tomatoState.status === 'idle');
         }
@@ -643,10 +643,6 @@
             if (tomatoState.status === 'idle' || tomatoState.status === 'paused') {
                 tomatoState.status = 'running';
                 tomatoState.lastTickTime = Date.now();
-                
-                // 正计时模式：不设置倒计时，从0开始累积
-                // 倒计时模式：已有 totalSeconds 和 remainingSeconds
-                
                 if (!tomatoState.intervalId) {
                     tomatoState.intervalId = setInterval(tickTomato, 1000);
                 }
@@ -668,14 +664,12 @@
             if (tomatoState.status === 'running') {
                 tomatoState.elapsedFocusSeconds += (now - tomatoState.lastTickTime) / 1000;
             }
-            
+
             if (record && tomatoState.elapsedFocusSeconds >= 60) {
                 const minutes = Math.floor(tomatoState.elapsedFocusSeconds / 60);
                 addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
-                
                 lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
-                
                 if (minutes >= 15) {
                     const drops = Math.min(Math.floor(minutes / 30) + 1, 4);
                     for (let i = 0; i < drops; i++) {
@@ -711,12 +705,11 @@
             } else if (record && tomatoState.elapsedFocusSeconds < 60) {
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
-            
+
             if (tomatoState.intervalId) {
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
             }
-            
             tomatoState.status = 'idle';
             tomatoState.elapsedFocusSeconds = 0;
             updateTomatoUI();
@@ -727,12 +720,10 @@
             const now = Date.now();
             const delta = (now - tomatoState.lastTickTime) / 1000;
             tomatoState.lastTickTime = now;
-            
+
             if (tomatoState.mode === 'stopwatch') {
-                // 正计时：只增加已用时间，不设上限
                 tomatoState.elapsedFocusSeconds += delta;
             } else {
-                // 倒计时：减少剩余时间，到0自动结束
                 tomatoState.remainingSeconds -= delta;
                 tomatoState.elapsedFocusSeconds += delta;
                 if (tomatoState.remainingSeconds <= 0) {
@@ -748,19 +739,16 @@
             if (tomatoState.status !== 'idle') return;
             tomatoState.totalSeconds = minutes * 60;
             tomatoState.remainingSeconds = minutes * 60;
-            tomatoState.mode = 'countdown';  // 预设时长默认使用倒计时
+            tomatoState.mode = 'countdown';
             updateTomatoUI();
         }
         function toggleTomatoMode() {
-            if (tomatoState.status !== 'idle') return;  // 只在空闲时可切换
+            if (tomatoState.status !== 'idle') return;
             tomatoState.mode = tomatoState.mode === 'countdown' ? 'stopwatch' : 'countdown';
-            
             if (tomatoState.mode === 'stopwatch') {
-                // 切换到正计时：清零已用时间，不设倒计时
                 tomatoState.elapsedFocusSeconds = 0;
                 tomatoState.remainingSeconds = 0;
             } else {
-                // 切换到倒计时：恢复预设时长
                 tomatoState.remainingSeconds = tomatoState.totalSeconds;
                 tomatoState.elapsedFocusSeconds = 0;
             }
@@ -1167,6 +1155,7 @@
                 });
                 document.getElementById('btnTomatoStart')?.addEventListener('click', startTomato);
                 document.getElementById('btnTomatoStop')?.addEventListener('click', () => stopTomato(true));
+                document.getElementById('btnTomatoMode')?.addEventListener('click', toggleTomatoMode);
                 document.getElementById('tomatoTaskInput')?.addEventListener('input', function() {
                     tomatoState.taskName = this.value.trim() || '番茄钟专注';
                 });
