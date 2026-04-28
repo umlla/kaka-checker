@@ -405,8 +405,7 @@
         // ==================== 冒险 ====================
         function refreshAdventure() {
             const nowSec = Date.now() / 1000;
-            updateTravelerState(nowSec);
-            autoUseBackpackItem();
+            updateTravelerState(nowSec); // 这里内部已经会调用 autoUseBackpackItem 了
             adventureState = {
                 weather: randChoice(WEATHERS),
                 event: randChoice(EVENTS),
@@ -1059,6 +1058,7 @@
                 if (adventureState.updatedAt && nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) {
                     refreshAdventure();
                 }
+                autoUseBackpackItem();
                 updateTravelerState(nowSec);
                 saveAll();
             }, 30000);
