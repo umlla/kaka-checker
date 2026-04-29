@@ -473,26 +473,17 @@
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-            // 检查是否处于极端状态
-            const isExtreme =
-                travelerState.hunger <= 8 ||
-                travelerState.mood <= 8 ||
-                travelerState.health <= 18 ||
-                travelerState.temperature <= -28;
-
-            if (!isExtreme) {
-                // 正常衰减
-                travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
-                travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
-                travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
-                if (travelerState.hunger < 20) {
-                    travelerState.health = Math.max(0, travelerState.health - hours * 4);
-                }
-                travelerState.temperature = clamp(travelerState.temperature, -30, 10);
-                travelerState.health = clamp(travelerState.health, 0, 100);
-                travelerState.hunger = clamp(travelerState.hunger, 0, 100);
-                travelerState.mood = clamp(travelerState.mood, 0, 100);
+            // 直接进行自然衰减，不再检查极端状态
+            travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
+            travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
+            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
+            if (travelerState.hunger < 20) {
+                travelerState.health = Math.max(0, travelerState.health - hours * 4);
             }
+            travelerState.temperature = clamp(travelerState.temperature, -30, 10);
+            travelerState.health = clamp(travelerState.health, 0, 100);
+            travelerState.hunger = clamp(travelerState.hunger, 0, 100);
+            travelerState.mood = clamp(travelerState.mood, 0, 100);
 
             travelerState.lastUpdate = nowSec;
         }
@@ -545,7 +536,7 @@
         // ==================== 冒险 ====================
         function refreshAdventure() {
             const nowSec = Date.now() / 1000;
-            updateTravelerState(nowSec);  // 内部已处理极端冻结
+            updateTravelerState(nowSec);
 
             const isExtreme =
                 travelerState.hunger <= 8 ||
@@ -566,18 +557,16 @@
                 eventObj = randChoice(EVENT_POOL);
             }
 
-            // 生成日志（即使冻结也记录）
+            // 始终应用效果（移除冻结保护）
+            applyEffect(eventObj.effects);
+
+            // 日志中不再标注“已冻结”
             const effectStr = formatEffects(eventObj.effects);
             if (effectStr) {
                 const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                 travelerState.log = travelerState.log || [];
-                travelerState.log.push(`${timeStr} 📜 ${isExtreme ? '⚠️情况危急' : '事件'}：${effectStr}${isExtreme ? '（已冻结）' : ''}`);
+                travelerState.log.push(`${timeStr} 📜 ${isExtreme ? '⚠️旅行者状态危急' : '事件'}：${effectStr}`);
                 if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-            }
-
-            // 非极端状态才应用效果
-            if (!isExtreme) {
-                applyEffect(eventObj.effects);
             }
 
             adventureState = {
