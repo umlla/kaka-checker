@@ -205,7 +205,6 @@
                 ["保暖袜","用厚实的雪原牦牛绒织成，袜口绣着歪歪扭扭的“探险快乐”。","你把手伸进袜子里试了试，又厚又软，像踩在云朵上。","旅行者立刻脱下湿透的袜子，套上这双保暖袜，用力跺了跺脚，满意地大喊一声“暖和了！”","warm",{"temp":5}],
                 ["雪原蘑菇","只在极夜过后的第一个黎明钻出地面，伞盖泛着淡蓝荧光。","你掰了一小块放进嘴里，先是薄荷般的清凉，然后一股辛辣窜上鼻腔，你忍不住打了个喷嚏。","旅行者把蘑菇切成薄片丢进锅里，汤很快变成了淡蓝色，他尝了一口，舒服地叹了口气。","food",{"hunger":8,"health":3}],
                 ["冻原浆果","一串凝霜的深紫色小果，酸中带甜。","你摘了一颗丢进嘴里，酸得整张脸皱成一团，可随后涌上来的甜味又让你忍不住多摘了两颗。","旅行者小心翼翼地把浆果一颗颗摘下来，每吃一颗就点一下头，像是在给自己加油。","food",{"hunger":6,"health":2}],
-                ["冰钓竿","看似普通的钓竿，鱼线却织入了冰蚕丝。","你甩了甩鱼竿，竿身柔韧得让你意外，你不禁幻想自己钓上一条大鱼的场面。","旅行者在冰面上凿了个洞，把钓竿伸进去，没过多久鱼线猛地一沉，他兴奋地站起身开始收线。","food",{"hunger":12}],
                 ["雪狐的脚印","一串逐渐消失在风中的脚印拓印。","你把脚印拓印凑到鼻子前，仿佛还能闻到雪狐留下的淡淡气味。","旅行者把拓印夹进笔记本，对照着指南针看了半天，随后一拍大腿，决定跟着脚印方向走一段试试。","support",{"mood":8}],
                 ["融雪护符","一块刻有简易符文的木牌，能让积雪加速融化。","你把护符贴在额头，感觉到一丝若有若无的温热，还挺舒服。","旅行者把护符插在帐篷边，周围的雪很快化开一小片干燥的地面，他一屁股坐下去，长舒一口气。","warm",{"temp":3,"mood":3}],
                 ["霜花书签","一枚永远保持冰晶形状的透明书签，夹在书页间会散发出清凉的草木香。","你翻开书把书签夹进去，一股清冽的冷香立刻飘了出来，你忍不住深吸一口气。","旅行者把书签夹进日记本，又凑上去闻了闻，然后拿起笔，似乎连字迹都比平时工整了一些。","support",{"mood":6}],
@@ -238,16 +237,34 @@
                 ["火绒盒", "一个小小的防水火绒盒，在潮湿环境也能轻松生火。", "你打开盒子，里面蓬松的火绒还带着草木香，你试了一下，火星一碰就着。", "旅行者蹲在背风处，用火绒盒轻松升起一堆篝火，搓着手烤了起来。", "warm", {"temp":3,"mood":3}],
                 ["绷带", "一卷干净的亚麻绷带，用以处理小伤口。", "你拉开绷带，手感柔软，还透着一股淡淡的草药味。", "旅行者熟练地给手臂上的伤口缠好绷带，活动了一下，满意地点点头。", "medical", {"health":5}],
                 ["暖石", "一块被篝火烤热的石头，用布包好可暖手数小时。", "你隔着布握住石头，热量慢慢透过布料传过来，手心一下就暖了。", "旅行者把暖石揣进怀里，原本缩着的肩膀慢慢放松了下来。", "warm", {"temp":5}],
+                ["熏肉干","一块用冷杉枝熏制的驯鹿肉干，表面泛着油光，咸香耐嚼。","你咬下一角，烟熏的风味立刻充满口腔，咸度刚好，很适合补充体力。","旅行者切下一小块含在嘴里舍不得咽，这味道让他想起了远方林中的篝火。","food",{"hunger":10}],
+                ["能量棒","用冻干浆果和压碎的坚果制成的便携食物，麻雀虽小五脏俱全。","你咬了一口，酸甜的浆果碎在齿间爆开，配上坚果的油脂，意外地好吃。","旅行者吃完后把包装纸小心叠好收起来，觉得这一天的脚程都有了底气。","food",{"hunger":8}],
+                ["冻莓干","采摘后直接在雪地里冻干的深紫色浆果，保留了原有的酸甜。","你抓了几粒丢进嘴里，冰凉酸甜，有点像小时候吃过的水果糖。","旅行者边走边时不时摸出几粒冻莓干含着，原本紧抿的嘴角终于松动了一些。","food",{"hunger":5,"mood":1}],
+                ["干酪块","压制风干的驯鹿奶酪，质地坚硬但奶香浓郁，可快速为身体提供热量。","你掰下一小块，硬得差点崩了牙，但化开后的奶香和咸味让人精神一振。","旅行者把干酪块扔进热水里化开，搅成一碗淡黄色的热汤，喝得满头细汗。","food",{"hunger":8,"health":1}],
+                ["风干鱼片","用冰泉里的小银鱼剖片风干而成，薄得透光，保留了大半鲜味。","你对着光看了看，鱼片边缘泛着淡淡的银色，撕下一丝放进嘴里，咸鲜味很足。","旅行者把鱼片撕成细丝，就着雪一口一口咽下去，吃完还舔了舔嘴唇。","food",{"hunger":7,"mood":1}],
+                ["苔原燕麦饼","把苔原上的野生燕麦压成饼，再在石板上烤得焦黄，带着质朴的谷物香。","你啃了一口，饼子又硬又糙，但越嚼越有一股阳光的味道，很踏实。","旅行者用石头把饼子敲碎泡进水里，呼噜噜地喝完，擦了擦嘴角，力气似乎回来了。","food",{"hunger":9}],
+                ["雪根脆片","一种生长在冻土下的球根，切片后烤脆，吃起来像薯片但更甜。","你拿起一片，薄薄脆脆的，带着一丝自然的焦糖味，让人想一把一把地吃。","旅行者咔嚓咔嚓地嚼着脆片，心情明显好转，还把掉落的碎屑喂给了一只路过的雪雀。","food",{"hunger":6,"mood":2}],
+                ["自热贴","撕开包装后与空气接触就能持续发热的小布贴，可贴在衣服内侧。","你撕开一张贴在胸口，不一会儿就有暖意透进来，像揣了个小暖炉。","旅行者把自热贴贴在背心内侧，那点持续的温热让他不再打哆嗦。","warm",{"temp":5}],
+                ["姜糖块","用老姜汁和少量糖熬制成的硬糖，含在嘴里能驱散寒意。","你含了一块，辛辣的姜味冲上脑门，紧接着身体就暖烘烘的。","旅行者剥开一块姜糖扔进嘴里，被辣得嘶嘶吐气，但原本发青的嘴唇很快恢复了血色。","food",{"temp":3,"mood":1}],
+                ["护耳套","用雪兔毛缝制的耳罩，皮毛蓬松柔软，能紧紧裹住双耳抵御冻伤。","你戴上去试了试，耳朵立刻像埋进了暖和的棉絮里，风声都变得遥远模糊。","旅行者把护耳套扣好，原本冻得通红的耳朵逐渐恢复了知觉，他感激地拍了拍头顶。","warm",{"temp":3,"mood":1}],
+                
             ],
             "稀有": [
                 ["治疗药膏", "由冻原草药制成的药膏，能快速治愈冻伤。", "你拧开盖子，一股冰薄荷味冲进鼻子，涂在手上凉丝丝的。", "旅行者把药膏仔细涂抹在冻伤的手背上，很快红肿就消退了，他长舒一口气。", "medical", {"health":15}],
                 ["指南针", "一个即使在极地磁场下也能稳定指向的古老指南针。", "你平举指南针，指针轻轻晃了晃就稳住了，你转了个圈，指针纹丝不动。", "旅行者掏出指南针对照了一下方向，收起地图，大步朝北走去。", "support", {"mood":8}],
                 ["保温睡袋", "用雪鸮绒填充的睡袋，能在-40°C环境中维持体温。", "你拉开拉链把手伸进去，里面暖烘烘的，像被一堆小猫围着。", "旅行者钻进睡袋，只露出一个脑袋，很快就传来均匀的呼吸声。", "warm", {"temp":10,"health":5}],
+                ["冰钓竿","看似普通的钓竿，鱼线却织入了冰蚕丝，能在冰层下钓上活鱼。耐久：10","你甩了甩鱼竿，竿身柔韧得让你意外，看来能派上不少用场。","旅行者在冰面上凿了个洞，把钓竿伸进去，没过多久鱼线猛地一沉，一条银闪闪的鱼破水而出！","food",{"durability":10, "onUse":{"hunger":12, "mood":1}}],
+
+                ["捕兽夹","折叠式轻便捕兽夹，放置在雪地中能捉到小型猎物。耐久：5","你试了试开合，夹齿很锋利，放在营地附近应该能有收获。","旅行者在一块岩石后布下捕兽夹，第二天清晨收夹时上面果然多了一只肥硕的雪兔。","food",{"durability":5, "onUse":{"hunger":10, "mood":1}}],
+
+                ["保温水壶","内壁镀了一层极地蜥蜴鳞粉的水壶，能将雪水自然保温数小时。耐久：8","你倒进雪水摇了摇，几分钟后倒出来的水是微温的，这设计太实用了。","旅行者拧开壶盖喝了一口温水，热气从喉咙暖到胃里，他舒服地哈了一口气。","warm",{"durability":8, "onUse":{"temp":3, "mood":1}}],
+
+                ["雪地帐篷","用特殊防水布料制成的帐篷，能抵御暴风雪的侵袭。耐久：5","你试着搭起帐篷，结构稳固，布料厚实，感觉在里面过夜应该没问题。","旅行者在暴风雪来临前迅速搭好帐篷，躲在里面听着外面的风呼啸，身体慢慢恢复了温暖。","warm",{"durability":5, "onUse":{"temp":4, "health":2}}],
             ],
             "传说": [
                 ["极地罗盘", "不仅能指方向，还会在靠近远古遗迹时微微发光的罗盘。", "你翻开罗盘盖子，边缘的符文微微发亮，你赶紧合上，心跳有点快。", "旅行者发现罗盘突然亮起蓝光，他深吸一口气，朝着光芒指引的方向快步走去。", "support", {"mood":15,"health":5}],
                 ["生命之水", "一小瓶传说能起死回生的冰泉之水。", "你举起小瓶对着光，液体里流动着细小的金点，你轻轻晃了晃，光点聚成漩涡。", "旅行者小心翼翼地喝下一小口生命之水，苍白的脸立刻红润起来，他惊讶地看着瓶子，又小心地盖好。", "medical", {"health":25}],
-            ]
+            ],
         };
         const THANKS_POOL = {
             food: [
@@ -285,7 +302,7 @@
         const UTC_OFFSET_HOURS = 8;
         const ADVENTURE_REFRESH_SEC = 30 * 60;
         const TICK_INTERVAL_MS = 8000;
-        const MAX_OFFLINE_HOURS = 48;
+        const MAX_OFFLINE_HOURS = 10;
 
         const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
         // ==================== 通用事件池（60条：原40条改值 + 新增20条） ====================
@@ -409,7 +426,7 @@
         function saveJSON(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {} }
 
         let userData = loadJSON(LS_KEYS.userData, {
-            checkins: {}, cards: [], lastDailyDraw: null, weeklyEggClaimed: null, dailyDropClaimed: null
+            checkins: {}, cards: [], lastDailyDraw: null, weeklyEggClaimed: null
         });
         let travelerState = loadJSON(LS_KEYS.traveler, {
             temperature: -10, health: 80, hunger: 70, mood: 60,
@@ -463,7 +480,6 @@
         function getAllOwnedNames() {
             const names = new Set();
             userData.cards.forEach(c => names.add(c[0]));
-            travelerState.backpack.forEach(([n]) => names.add(n));
             return names;
         }
 
@@ -507,21 +523,64 @@
         function autoUseBackpackItem() {
             const bp = travelerState.backpack;
             if (!bp.length) return null;
+
             const needs = [
                 { stat: 'hunger', threshold: 20, category: 'food' },
                 { stat: 'health', threshold: 30, category: 'medical' },
                 { stat: 'temperature', threshold: -15, category: 'warm' },
                 { stat: 'mood', threshold: 20, category: 'support' },
             ];
+
             for (const need of needs) {
                 if (travelerState[need.stat] < need.threshold) {
                     const idx = bp.findIndex(([name]) => getItemCategory(name) === need.category);
-                    if (idx !== -1) {
-                        const [itemName] = bp[idx];
-                        const effect = getItemEffect(itemName);
+                    if (idx === -1) continue;
+                    
+                    const item = bp[idx];
+                    const itemName = item[0];
+                    const durability = item[2] || 1;
+                    const effect = getItemEffect(itemName); 
+                    
+                    // ——————— 耐久物品处理（数据驱动）———————
+                    if (effect?.durability !== undefined) {
+                        const useProbability = 0.3;
+                        if (Math.random() < useProbability) {
+                            const newDurability = durability - 1;
+                            
+                            // 优先使用 onUse 效果，否则回退到 effect 中的直接数值（兼容）
+                            const useEffect = effect.onUse || {};
+                            if (Object.keys(useEffect).length > 0) {
+                                applyEffect(useEffect);
+                            } else {
+                                // 无 onUse 时，从 effect 里提取标准字段
+                                const directEffect = {};
+                                ['hunger','health','temp','mood'].forEach(k => {
+                                    if (effect[k] !== undefined) directEffect[k] = effect[k];
+                                });
+                                applyEffect(directEffect);
+                            }
+                            
+                            const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
+                            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                            travelerState.log = travelerState.log || [];
+                            travelerState.log.push(`${timeStr} ${useText}（剩余耐久：${newDurability}）`);
+                            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                            
+                            if (newDurability <= 0) {
+                                bp.splice(idx, 1);
+                            } else {
+                                bp[idx] = [itemName, item[1], newDurability];
+                            }
+                            return useText;
+                        } else {
+                            continue;
+                        }
+                    } 
+                    // ——————— 一次性物品处理 ———————
+                    else {
                         if (effect) applyEffect(effect);
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        const useText = getTravelerUseText(itemName) || '旅行者使用了物品。';
+                        const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
                         travelerState.log = travelerState.log || [];
                         travelerState.log.push(`${timeStr} ${useText}`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
@@ -565,7 +624,7 @@
             if (effectStr) {
                 const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                 travelerState.log = travelerState.log || [];
-                travelerState.log.push(`${timeStr} 📜 ${isExtreme ? '⚠️旅行者状态危急' : '事件'}：${effectStr}`);
+                travelerState.log.push(`${timeStr}  ${isExtreme ? '⚠️旅行者状态危急' : '事件'}：${effectStr}`);
                 if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
             }
 
@@ -723,47 +782,10 @@
             }
         }
 
-        function processDailyDrop() {
-            const today = getToday();
-            if (userData.dailyDropClaimed === today) return null;
-            const dur = calcStats(getToday()).totalDurationToday;
-            if (dur <= 0) return null;
-            const ownedNames = getAllOwnedNames();
-            let pool;
-            if (dur >= 120) pool = DROP_POOL['传说'];
-            else if (dur >= 60) pool = DROP_POOL['稀有'];
-            else pool = DROP_POOL['普通'];
-            const available = pool.filter(item => !ownedNames.has(item[0]));
-            if (!available.length) return null;
-            const drop = randChoice(available);
-            addUserItem(drop[0], drop[1], 1);
-            userData.dailyDropClaimed = today;
-            return { name: drop[0], desc: drop[1] };
-        }
-        // 番茄钟掉落辅助：按期望稀有度取物，池空时依次尝试更稀有/更不稀有
-        function pickDropItem(preferRarity) {
-            const owned = getAllOwnedNames();
-            const order = ['传说', '稀有', '普通'];
-            const startIdx = order.indexOf(preferRarity);
-            // 尝试顺序：期望稀有度 → 上一级（更稀有）→ 下一级（更不稀有）
-            const tryOrder = [
-                startIdx,
-                Math.max(0, startIdx - 1),
-                Math.min(order.length - 1, startIdx + 1)
-            ].filter((v, i, arr) => arr.indexOf(v) === i); // 去重
-
-            for (const idx of tryOrder) {
-                const rarity = order[idx];
-                const pool = DROP_POOL[rarity].filter(item => !owned.has(item[0]));
-                if (pool.length > 0) {
-                    const item = pool[Math.floor(Math.random() * pool.length)];
-                    return { item, rarity };
-                }
-            }
-            return null; // 所有掉落物品均已拥有
-        }
+    
 
         // ==================== 番茄钟模块 ====================
+        let lastTomatoDrops = [];
         let tomatoState = {
             totalSeconds: 25 * 60,
             remainingSeconds: 25 * 60,
@@ -856,26 +878,37 @@
                 lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
                 if (minutes >= 15) {
-                    const drops = Math.min(Math.floor(minutes / 30) + 1, 4);
-                    for (let i = 0; i < drops; i++) {
-                        let preferRarity = '普通';   // 默认普通
+                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4); // 槽数规则保持原样
+                    for (let i = 0; i < slotCount; i++) {
+                        let preferRarity = '普通';
+                        // ≥45分钟时启用稀有/传说概率
                         if (minutes >= 45) {
-                            // 长番茄：30%传说，70%稀有
-                            preferRarity = Math.random() < 0.3 ? '传说' : '稀有';
-                        } else if (minutes >= 30) {
-                            preferRarity = '稀有';
-                        }
-
-                        const result = pickDropItem(preferRarity);
-                        if (result) {
-                            addUserItem(result.item[0], result.item[1], 1);
-                            lastTomatoDrops.push(`${result.rarity} · ${result.item[0]} x1`);
-                            msg += ` 🎒 获得【${result.item[0]}】`;
-                            if (result.rarity !== preferRarity) {
-                                msg += `（原本追求${preferRarity}，掉落了${result.rarity}）`;
+                            const rand = Math.random();
+                            if (rand < 0.1) {
+                                preferRarity = '传说';
+                            } else if (rand < 0.3) {
+                                preferRarity = '稀有';
+                            } else {
+                                preferRarity = '普通';
                             }
+                        }
+                        // 小于45分钟则保持 '普通'
+
+                        if (preferRarity === '普通') {
+                            const item = dropCommonItem();
+                            lastTomatoDrops.push(`普通 · ${item[0]} x1`);
+                            msg += ` 🎒 获得【${item[0]}】`;
                         } else {
-                            msg += ' （所有掉落物品均已集齐）';
+                            const item = dropRareOrLegendaryItem(preferRarity);
+                            if (item) {
+                                lastTomatoDrops.push(`${preferRarity} · ${item[0]} x1`);
+                                msg += ` 🎒 获得【${item[0]}】`;
+                            } else {
+                                // 池空，退化为普通
+                                const commonItem = dropCommonItem();
+                                lastTomatoDrops.push(`普通 · ${commonItem[0]} x1`);
+                                msg += ` 🎒 获得【${commonItem[0]}】（${preferRarity}池已空）`;
+                            }
                         }
                     }
                 }
@@ -947,7 +980,7 @@
             if (!useText) return null;
             if (!removeUserItem(name, 1)) return null;
             
-            travelerState.backpack.push([name, Date.now() / 1000]);
+            travelerState.backpack.push([name, Date.now() / 1000, (getItemEffect(name)?.durability || 1)]);
             
             // 根据分类随机选择感谢语
             const category = getItemCategory(name) || 'default';
@@ -1099,7 +1132,6 @@
                     <button class="btn btn-gold btn-sm" id="btnDrawCard">🎴 抽卡（每日）</button>
                     <span style="font-size:0.75rem;color:#94a3b8;align-self:center;">
                         ${userData.lastDailyDraw === today ? '✅ 今日已抽卡' : '⬅ 打卡后可抽'}
-                        ${userData.dailyDropClaimed === today ? ' | 🎁 已掉落' : ''}
                     </span>
                 </div>
 
@@ -1132,7 +1164,12 @@
             const t = report.traveler;
             const updateTime = new Date(report.updatedAt * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
             const remaining = Math.max(0, Math.ceil((ADVENTURE_REFRESH_SEC - (Date.now()/1000 - report.updatedAt)) / 60));
-            let bpHtml = t.backpack.length ? '<ul class="backpack-list">' + t.backpack.map(([n]) => `<li>🎒 ${escHtml(n)}</li>`).join('') + '</ul>' : '<span style="color:#64748b;font-size:0.8rem;">（空）</span>';
+            let bpHtml = t.backpack.length ? '<ul class="backpack-list">' + t.backpack.map((item) => {
+                const [name, , dur] = item;
+                const durability = dur || 1;
+                const durText = (durability > 1) ? ` (${durability})` : '';
+                return `<li>🎒 ${escHtml(name)}${durText}</li>`;
+            }).join('') + '</ul>' : '<span style="color:#64748b;font-size:0.8rem;">（空）</span>';
 
             const statusMsgs = [];
             if (t.temperature <= -25) statusMsgs.push('❄️极度寒冷');
@@ -1326,8 +1363,6 @@
                     const result = processDailyDraw();
                     if (!result) { showToast('⚠️ 今天还没有打卡，或者已经抽过卡了'); return; }
                     showToast(`${result.isExtra ? '🌈 连续七天彩蛋！传奇亮相！' : '🎴 每日抽卡'} 获得【${result.name}】`, 3500);
-                    const drop = processDailyDrop();
-                    if (drop) showToast(`🎁 专注奖励掉落：【${drop.name}】`, 3500);
                     saveAll();
                     renderPanel('checkin');
                     updateTravelerBar();
