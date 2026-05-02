@@ -473,11 +473,11 @@
             isDirty = true;
         }
 
-        function forceforceSaveAll() {
+        function forceSaveAll() {
             saveJSON(LS_KEYS.userData, userData);
             saveJSON(LS_KEYS.traveler, travelerState);
             saveJSON(LS_KEYS.adventure, adventureState);
-            // 更新缓存值，用于阈值比较
+            // 更新缓存
             lastSavedTraveler = {
                 temperature: travelerState.temperature,
                 health: travelerState.health,
@@ -485,12 +485,6 @@
                 mood: travelerState.mood
             };
             isDirty = false;
-        }
-
-        function forceSaveAll() {
-            saveJSON(LS_KEYS.userData, userData);
-            saveJSON(LS_KEYS.traveler, travelerState);
-            saveJSON(LS_KEYS.adventure, adventureState);
         }
 
         // ==================== 物品查询与堆叠 ====================
@@ -994,6 +988,7 @@
             }
             tomatoState.status = 'idle';
             tomatoState.elapsedFocusSeconds = 0;
+            tomatoState.remainingSeconds = tomatoState.totalSeconds;
             updateTomatoUI();
         }
 
@@ -1375,7 +1370,7 @@
 
                 document.getElementById('btnClearAll')?.addEventListener('click', () => {
                     const cnt = clearTodayCheckins();
-                    forceforceSaveAll();
+                    forceSaveAll();
                     showToast(cnt > 0 ? `✅ 已清除今天 ${cnt} 条记录` : '📅 今天还没有打卡记录');
                     renderPanel('checkin');
                 });
@@ -1511,8 +1506,14 @@
             if (effect.count === 0) return; // 晴朗天气无雪花
 
             const flakes = ['❄', '❅', '❆', '✦', '•', '·'];
-            if (effect.hail) flakes.length = 0; flakes.push('•', '·', '⬤'); // 冰雹用小圆点
-            if (effect.rain) flakes.length = 0; flakes.push('|', '│'); // 冻雨用竖线
+            if (effect.hail) {
+                flakes.length = 0;
+                flakes.push('•', '·', '⬤');
+            }
+            if (effect.rain) {
+                flakes.length = 0;
+                flakes.push('|', '│');
+            }
 
             for (let i = 0; i < effect.count; i++) {
                 const span = document.createElement('span');
@@ -1577,18 +1578,24 @@
             }, 30000);
         }
         // ==================== 番茄钟掉落辅助函数 ====================
+        // --- 普 通 掉 落（过滤已拥有） ---
         function dropCommonItem() {
-            const pool = DROP_POOL["普通"];
-            if (!pool || pool.length === 0) return null;
-            const item = randChoice(pool);
-            addUserItem(item[0], item[1]);   // 名称, 描述
-            return item;   // 返回整个数组，调用处用 item[0] 取名字
+            const ownedNames = getAllOwnedNames();
+            const available = DROP_POOL["普通"].filter(item => !ownedNames.has(item[0]));
+            if (available.length === 0) return null;
+            const item = randChoice(available);
+            addUserItem(item[0], item[1]);
+            return item;
         }
 
+        // --- 稀 有 / 传 说 掉 落（过滤已拥有） ---
         function dropRareOrLegendaryItem(rarity) {
+            const ownedNames = getAllOwnedNames();
             const pool = DROP_POOL[rarity];
             if (!pool || pool.length === 0) return null;
-            const item = randChoice(pool);
+            const available = pool.filter(item => !ownedNames.has(item[0]));
+            if (available.length === 0) return null;    // 池空，返回 null，由调用处降级处理
+            const item = randChoice(available);
             addUserItem(item[0], item[1]);
             return item;
         }
