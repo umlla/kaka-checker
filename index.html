@@ -153,6 +153,18 @@
             #tomatoTaskInput { width: 100% !important; }
             .adventure-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
         }
+        @keyframes fallWind {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            25% { transform: translateY(25vh) rotate(90deg) translateX(50px); opacity: 0.7; }
+            50% { transform: translateY(50vh) rotate(180deg) translateX(-30px); opacity: 0.5; }
+            75% { transform: translateY(75vh) rotate(270deg) translateX(40px); opacity: 0.4; }
+            100% { transform: translateY(105vh) rotate(360deg) translateX(-20px); opacity: 0.15; }
+        }
+        @keyframes fallSparkle {
+            0% { transform: translateY(0) scale(0.8); opacity: 0.3; }
+            50% { transform: translateY(50vh) scale(1.2); opacity: 0.8; }
+            100% { transform: translateY(105vh) scale(0.8); opacity: 0.3; }
+        }
     </style>
 </head>
 <body>
@@ -305,6 +317,18 @@
         const MAX_OFFLINE_HOURS = 10;
 
         const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
+        const WEATHER_EFFECTS = {
+            "暴风雪": { count: 60, minSize: 1.5, maxSize: 3.0, minDur: 2, maxDur: 6, opacity: 0.9, wind: true },
+            "晴朗": { count: 0, minSize: 0, maxSize: 0, minDur: 0, maxDur: 0, opacity: 0 },
+            "极夜": { count: 20, minSize: 0.5, maxSize: 1.5, minDur: 8, maxDur: 15, opacity: 0.5, glow: true },
+            "雾凇": { count: 15, minSize: 1.0, maxSize: 2.0, minDur: 10, maxDur: 20, opacity: 0.6 },
+            "冰雹": { count: 50, minSize: 0.3, maxSize: 0.6, minDur: 1, maxDur: 3, opacity: 0.8, hail: true },
+            "小雪": { count: 30, minSize: 0.8, maxSize: 1.8, minDur: 6, maxDur: 12, opacity: 0.7 },
+            "极光": { count: 25, minSize: 0.5, maxSize: 1.2, minDur: 5, maxDur: 10, opacity: 0.6, aurora: true },
+            "冻雨": { count: 40, minSize: 0.2, maxSize: 0.4, minDur: 2, maxDur: 4, opacity: 0.7, rain: true },
+            "白化天": { count: 5, minSize: 0.2, maxSize: 0.4, minDur: 15, maxDur: 25, opacity: 0.2 },
+            "钻石尘": { count: 35, minSize: 0.3, maxSize: 0.5, minDur: 8, maxDur: 16, opacity: 0.5, sparkle: true }
+        };
         // ==================== 通用事件池（60条：原40条改值 + 新增20条） ====================
         const EVENT_POOL = [
             // ---------- 原有事件（数值已调整） ----------
@@ -435,8 +459,35 @@
         let adventureState = loadJSON(LS_KEYS.adventure, {
             weather: '晴朗', event: '旅行者正在雪原上跋涉，四周一片寂静，只有风声相伴。', updatedAt: 0
         });
+        // ==================== 脏标记优化 ====================
+        let isDirty = false;
 
-        function saveAll() {
+        let lastSavedTraveler = {
+            temperature: travelerState.temperature,
+            health: travelerState.health,
+            hunger: travelerState.hunger,
+            mood: travelerState.mood
+        };
+
+        function markDirty() {
+            isDirty = true;
+        }
+
+        function forceforceSaveAll() {
+            saveJSON(LS_KEYS.userData, userData);
+            saveJSON(LS_KEYS.traveler, travelerState);
+            saveJSON(LS_KEYS.adventure, adventureState);
+            // 更新缓存值，用于阈值比较
+            lastSavedTraveler = {
+                temperature: travelerState.temperature,
+                health: travelerState.health,
+                hunger: travelerState.hunger,
+                mood: travelerState.mood
+            };
+            isDirty = false;
+        }
+
+        function forceSaveAll() {
             saveJSON(LS_KEYS.userData, userData);
             saveJSON(LS_KEYS.traveler, travelerState);
             saveJSON(LS_KEYS.adventure, adventureState);
@@ -480,8 +531,9 @@
         function getAllOwnedNames() {
             const names = new Set();
             userData.cards.forEach(c => names.add(c[0]));
+            travelerState.backpack.forEach(([name]) => names.add(name));
             return names;
-        }
+}
 
         // ==================== 旅行者状态 ====================
         function updateTravelerState(nowSec = Date.now()/1000) {
@@ -500,6 +552,15 @@
             travelerState.health = clamp(travelerState.health, 0, 100);
             travelerState.hunger = clamp(travelerState.hunger, 0, 100);
             travelerState.mood = clamp(travelerState.mood, 0, 100);
+                // 阈值比较：只有当数值变化明显时才标记为脏
+            const dTemp = Math.abs(travelerState.temperature - lastSavedTraveler.temperature);
+            const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
+            const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
+            const dMood = Math.abs(travelerState.mood - lastSavedTraveler.mood);
+
+            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3) {
+                markDirty();
+            }
 
             travelerState.lastUpdate = nowSec;
         }
@@ -616,10 +677,10 @@
                 eventObj = randChoice(EVENT_POOL);
             }
 
-            // 始终应用效果（移除冻结保护）
+            // 应用事件效果
             applyEffect(eventObj.effects);
 
-            // 日志中不再标注“已冻结”
+            // 记录日志
             const effectStr = formatEffects(eventObj.effects);
             if (effectStr) {
                 const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
@@ -628,12 +689,19 @@
                 if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
             }
 
+            // 天气变化更新飘雪
+            const newWeather = randChoice(WEATHERS);
+            if (newWeather !== adventureState.weather) {
+                initSnowfall(newWeather);
+            }
+
+            // 最终设置冒险状态
             adventureState = {
-                weather: randChoice(WEATHERS),
+                weather: newWeather,
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
-            saveAll();
+            forceSaveAll();
         }
 
                 function getAdventureReport() {
@@ -660,7 +728,7 @@
                 done: true,
                 duration: duration || null,
             });
-            saveAll();
+            forceSaveAll();
         }
 
         function clearTodayCheckins(taskName = null) {
@@ -685,7 +753,7 @@
             const changed = userData.checkins[today].length < before;
             if (changed) {
                 if (userData.checkins[today].length === 0) delete userData.checkins[today];
-                saveAll();
+                forceSaveAll();
             }
             return changed;
         }
@@ -697,7 +765,7 @@
             const entry = userData.checkins[today].find(e => e.timestamp === timestamp);
             if (entry) {
                 entry.task = newTask;
-                saveAll();
+                forceSaveAll();
                 return true;
             }
             return false;
@@ -773,11 +841,11 @@
             if (card) {
                 addUserItem(card.name, card.desc, 1);
                 userData.lastDailyDraw = today;
-                saveAll();
+                forceSaveAll();
                 return { name: card.name, desc: card.desc, isExtra };
             } else {
                 userData.lastDailyDraw = today; // 防止无卡可抽时仍能无限抽
-                saveAll();
+                forceSaveAll();
                 return null;
             }
         }
@@ -913,7 +981,7 @@
                     }
                 }
                 showToast(msg, 4000);
-                saveAll();
+                forceSaveAll();
                 renderPanel('checkin');
                 updateTravelerBar();
             } else if (record && tomatoState.elapsedFocusSeconds < 60) {
@@ -935,6 +1003,20 @@
             const delta = (now - tomatoState.lastTickTime) / 1000;
             tomatoState.lastTickTime = now;
 
+            // 检测时间跳跃（大于3秒视为休眠等异常）
+            if (delta > 3) {
+                // 暂停番茄钟，保留已累积的专注时间
+                tomatoState.status = 'paused';
+                if (tomatoState.intervalId) {
+                    clearInterval(tomatoState.intervalId);
+                    tomatoState.intervalId = null;
+                }
+                showToast('⏸ 检测到时间跳跃，番茄钟已暂停。', 3500);
+                updateTomatoUI();
+                return;
+            }
+
+            // 正常计时
             if (tomatoState.mode === 'stopwatch') {
                 tomatoState.elapsedFocusSeconds += delta;
             } else {
@@ -987,7 +1069,7 @@
             const pool = THANKS_POOL[category] || THANKS_POOL.default;
             const thanks = pool[Math.floor(Math.random() * pool.length)];
             
-            saveAll();
+            forceSaveAll();
             return `旅行者收下了${name}，${thanks}`;
         }
 
@@ -1030,7 +1112,7 @@
                     userData = data.userData;
                     travelerState = data.travelerState;
                     adventureState = data.adventureState;
-                    saveAll();
+                    forceSaveAll();
                     updateTravelerBar();
                     const activeTab = document.querySelector('.tab-btn.active');
                     if (activeTab) renderPanel(activeTab.dataset.tab);
@@ -1057,7 +1139,7 @@
             document.getElementById('hungerBar').style.width = t.hunger + '%';
             document.getElementById('moodBar').style.width = t.mood + '%';
             document.getElementById('weatherTag').textContent = '☁️ ' + adventureState.weather;
-            saveAll();
+            
         }
 
         function renderPanel(tabName) {
@@ -1140,7 +1222,7 @@
                 <!-- 番茄钟（固定在底部） -->
                 <div class="tomato-section" style="flex-shrink:0;">
                     <h4 style="margin:0 0 4px;color:#c8ddf8;">🍅 番茄钟</h4>
-                    <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds)}</div>
+                    <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds, tomatoState.mode)}</div>
                     <div class="tomato-preset">
                         <button class="btn btn-outline btn-sm preset-btn" data-min="15">15分</button>
                         <button class="btn btn-outline btn-sm preset-btn" data-min="25">25分</button>
@@ -1293,7 +1375,7 @@
 
                 document.getElementById('btnClearAll')?.addEventListener('click', () => {
                     const cnt = clearTodayCheckins();
-                    saveAll();
+                    forceforceSaveAll();
                     showToast(cnt > 0 ? `✅ 已清除今天 ${cnt} 条记录` : '📅 今天还没有打卡记录');
                     renderPanel('checkin');
                 });
@@ -1363,7 +1445,7 @@
                     const result = processDailyDraw();
                     if (!result) { showToast('⚠️ 今天还没有打卡，或者已经抽过卡了'); return; }
                     showToast(`${result.isExtra ? '🌈 连续七天彩蛋！传奇亮相！' : '🎴 每日抽卡'} 获得【${result.name}】`, 3500);
-                    saveAll();
+                    forceSaveAll();
                     renderPanel('checkin');
                     updateTravelerBar();
                 });
@@ -1398,7 +1480,7 @@
                         const name = btn.dataset.name;
                         const thanks = giveToTraveler(name);
                         if (!thanks) return;
-                        saveAll();
+                        forceSaveAll();
                         showToast(`🎁 ${thanks}`);
                         renderPanel('cards');
                         updateTravelerBar();
@@ -1417,18 +1499,56 @@
         }
 
         // ==================== 飘雪与定时器 ====================
-        function initSnowfall() {
+        let snowflakes = []; // 存放当前雪花元素
+
+        function initSnowfall(weather = adventureState.weather) {
             const container = document.getElementById('snowfall');
+            // 清除旧雪花
+            container.innerHTML = '';
+            snowflakes = [];
+
+            const effect = WEATHER_EFFECTS[weather] || WEATHER_EFFECTS['小雪'];
+            if (effect.count === 0) return; // 晴朗天气无雪花
+
             const flakes = ['❄', '❅', '❆', '✦', '•', '·'];
-            for (let i = 0; i < 40; i++) {
+            if (effect.hail) flakes.length = 0; flakes.push('•', '·', '⬤'); // 冰雹用小圆点
+            if (effect.rain) flakes.length = 0; flakes.push('|', '│'); // 冻雨用竖线
+
+            for (let i = 0; i < effect.count; i++) {
                 const span = document.createElement('span');
                 span.className = 'snowflake';
-                span.textContent = randChoice(flakes);
+                span.textContent = flakes[Math.floor(Math.random() * flakes.length)];
+
+                // 随机大小
+                const size = effect.minSize + Math.random() * (effect.maxSize - effect.minSize);
+                span.style.fontSize = size + 'rem';
+                // 随机下落速度
+                const duration = effect.minDur + Math.random() * (effect.maxDur - effect.minDur);
+                span.style.animationDuration = duration + 's';
+                // 随机透明度
+                span.style.opacity = effect.opacity * (0.5 + Math.random() * 0.5);
+                // 初始位置
                 span.style.left = Math.random() * 100 + '%';
-                span.style.fontSize = (0.5 + Math.random() * 1.2) + 'rem';
-                span.style.animationDuration = (6 + Math.random() * 14) + 's';
-                span.style.animationDelay = Math.random() * 12 + 's';
+                span.style.animationDelay = Math.random() * 10 + 's';
+
+                // 特殊效果
+                if (effect.wind) {
+                    span.style.animationName = 'fallWind'; // 需要定义倾斜动画
+                } else if (effect.sparkle) {
+                    span.style.animationName = 'fallSparkle'; // 闪烁
+                } else {
+                    span.style.animationName = 'fall';
+                }
+
+                // 极光颜色
+                if (effect.aurora) {
+                    const colors = ['#a0f0c0', '#80c0ff', '#c0a0ff', '#f0c0e0'];
+                    span.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    span.style.textShadow = '0 0 4px #fff, 0 0 10px currentColor';
+                }
+
                 container.appendChild(span);
+                snowflakes.push(span);
             }
         }
 
@@ -1451,14 +1571,32 @@
                 }
                 autoUseBackpackItem();
                 updateTravelerState(nowSec);
-                saveAll();
+                if (isDirty) {
+                    forceSaveAll();
+                }
             }, 30000);
+        }
+        // ==================== 番茄钟掉落辅助函数 ====================
+        function dropCommonItem() {
+            const pool = DROP_POOL["普通"];
+            if (!pool || pool.length === 0) return null;
+            const item = randChoice(pool);
+            addUserItem(item[0], item[1]);   // 名称, 描述
+            return item;   // 返回整个数组，调用处用 item[0] 取名字
+        }
+
+        function dropRareOrLegendaryItem(rarity) {
+            const pool = DROP_POOL[rarity];
+            if (!pool || pool.length === 0) return null;
+            const item = randChoice(pool);
+            addUserItem(item[0], item[1]);
+            return item;
         }
 
         function init() {
             updateTravelerState(Date.now() / 1000);
-            saveAll();
-            initSnowfall();
+            forceSaveAll();
+            initSnowfall(adventureState.weather); // 改为带参数
             initTabs();
             startTickers();
             renderPanel('checkin');
@@ -1471,7 +1609,7 @@
 
         window.addEventListener('beforeunload', () => {
             updateTravelerState(Date.now() / 1000);
-            saveAll();
+            forceSaveAll();
         });
     })();
 </script>
