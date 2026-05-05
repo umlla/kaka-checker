@@ -554,7 +554,6 @@
             travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
             travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
             travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
-            // 健康衰减移入 applyEffect，避免重复
 
             travelerState.temperature = clamp(travelerState.temperature, -30, 10);
             travelerState.health = clamp(travelerState.health, 0, 100);
@@ -572,29 +571,60 @@
             }
 
             // ---------- 离线自我维持 ----------
-                // ---------- 离线自我维持 ----------
-            if (hours > 0.1) {
-                const maxCycles = Math.floor(hours * 2); // 每小时尝试2次
-                let cyclesLeft = maxCycles;
-                // 先使用背包物品，直到用完或循环结束
-                while (cyclesLeft > 0 && travelerState.backpack.length > 0) {
+            if (hours > 0.1) { // 离线超过6分钟
+                // 第一步：使用背包物品（每小时2次）
+                const usageCycles = Math.floor(hours * 2);
+                for (let i = 0; i < usageCycles; i++) {
                     autoUseBackpackItem();
-                    cyclesLeft--;
+                    // 若背包空了就停止，不浪费循环
+                    if (travelerState.backpack.length === 0) break;
                 }
-                // 如果背包已空，且还有剩余循环，尝试找劣质品
-                if (cyclesLeft > 0 && SURVIVAL_SCRAPS.length > 0) {
-                    const findChancePerCycle = 0.4; // 每次尝试40%概率找到
-                    let foundCount = 0;
-                    for (let i = 0; i < cyclesLeft; i++) {
-                        if (Math.random() < findChancePerCycle) {
-                            const item = randChoice(SURVIVAL_SCRAPS);
-                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
-                            foundCount++;
-                        }
-                    }
-                    if (foundCount > 0) {
+
+                // 第二步：挣扎求生（生存危机时才拼命找劣质品）
+                const isStarving = travelerState.hunger < 30;
+                const isFreezing = travelerState.temperature < -10;
+                const isDying = travelerState.health < 25;
+
+                if (isStarving || isFreezing || isDying) {
+                    // 每2小时必定找到一件劣质品，上限为（离线小时数×2）件，但最多8件
+                    let findCount = Math.floor(hours / 2);
+                    findCount = Math.max(findCount, 1);    // 至少找1次
+                    findCount = Math.min(findCount, 8);    // 最多8件
+
+                    for (let i = 0; i < findCount; i++) {
+                        // 每次求生会消耗体力，并使人沮丧
+                        travelerState.health = clamp(travelerState.health - 1, 0, 100);
+                        travelerState.mood = clamp(travelerState.mood - 2, 0, 100);
+
+                        // 优先选择当前最需要的类别
+                        const needFood = travelerState.hunger < 30;
+                        const needWarm = travelerState.temperature < -15;
+                        const needMedical = travelerState.health < 30;
+
+                        const candidates = SURVIVAL_SCRAPS.filter(item => {
+                            if (needFood && item[4] === 'food') return true;
+                            if (needWarm && item[4] === 'warm') return true;
+                            if (needMedical && item[4] === 'medical') return true;
+                            if (!needFood && !needWarm && !needMedical) return true; // 不急需则随机
+                            return false;
+                        });
+                        const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
+                        const item = randChoice(pool);
+                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        travelerState.log.push(`${timeStr} 旅行者在 ${Math.floor(hours)} 小时里挣扎求生，从雪里刨出了 ${foundCount} 件破烂。`);
+                        travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}。`);
+                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                    }
+                }
+                // 如果没到危机程度，只是背包空了，也有小概率自己找点东西（原来的逻辑保留）
+                else if (travelerState.backpack.length === 0 && SURVIVAL_SCRAPS.length > 0) {
+                    const findChance = Math.min(0.6, hours * 0.1); // 最高60%概率
+                    if (Math.random() < findChance) {
+                        const item = randChoice(SURVIVAL_SCRAPS);
+                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                        travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}。`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                     }
                 }
