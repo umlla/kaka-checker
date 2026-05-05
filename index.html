@@ -572,20 +572,29 @@
             }
 
             // ---------- 离线自我维持 ----------
-            if (hours > 0.1) { // 离线超过6分钟
-                const cycles = Math.floor(hours * 2); // 每小时尝试2次使用物品
-                for (let i = 0; i < cycles; i++) {
+                // ---------- 离线自我维持 ----------
+            if (hours > 0.1) {
+                const maxCycles = Math.floor(hours * 2); // 每小时尝试2次
+                let cyclesLeft = maxCycles;
+                // 先使用背包物品，直到用完或循环结束
+                while (cyclesLeft > 0 && travelerState.backpack.length > 0) {
                     autoUseBackpackItem();
+                    cyclesLeft--;
                 }
-                // 如果背包仍然为空，尝试自己找点劣质求生品
-                if (travelerState.backpack.length === 0 && SURVIVAL_SCRAPS.length > 0) {
-                    // 每小时有40%概率找到一样东西，最多累计到90%
-                    const findChance = Math.min(0.9, hours * 0.15);
-                    if (Math.random() < findChance) {
-                        const item = randChoice(SURVIVAL_SCRAPS);
-                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                // 如果背包已空，且还有剩余循环，尝试找劣质品
+                if (cyclesLeft > 0 && SURVIVAL_SCRAPS.length > 0) {
+                    const findChancePerCycle = 0.4; // 每次尝试40%概率找到
+                    let foundCount = 0;
+                    for (let i = 0; i < cyclesLeft; i++) {
+                        if (Math.random() < findChancePerCycle) {
+                            const item = randChoice(SURVIVAL_SCRAPS);
+                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                            foundCount++;
+                        }
+                    }
+                    if (foundCount > 0) {
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}。`);
+                        travelerState.log.push(`${timeStr} 旅行者在 ${Math.floor(hours)} 小时里挣扎求生，从雪里刨出了 ${foundCount} 件破烂。`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                     }
                 }
@@ -735,6 +744,44 @@
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
+                // 在线拾荒：旅行者独自前行时，有概率捡到劣质求生品
+    // 只为濒危状态拼命，正常时偶尔捡点小破烂
+            const isStarvingOnline = travelerState.hunger < 30;
+            const isFreezingOnline = travelerState.temperature < -10;
+            const isDyingOnline = travelerState.health < 25;
+
+            // 基础概率 8%，危机时提升到 25%
+            const scavengeChance = (isStarvingOnline || isFreezingOnline || isDyingOnline) ? 0.25 : 0.08;
+
+            if (Math.random() < scavengeChance && SURVIVAL_SCRAPS.length > 0) {
+                // 在危机状态下寻找，付出一点代价
+                if (isStarvingOnline || isFreezingOnline || isDyingOnline) {
+                    travelerState.health = clamp(travelerState.health - 1, 0, 100);
+                    travelerState.mood = clamp(travelerState.mood - 2, 0, 100);
+                }
+
+                // 优先选择当前最需要的类别
+                const needFood = travelerState.hunger < 30;
+                const needWarm = travelerState.temperature < -15;
+                const needMedical = travelerState.health < 30;
+
+                const candidates = SURVIVAL_SCRAPS.filter(item => {
+                    if (needFood && item[4] === 'food') return true;
+                    if (needWarm && item[4] === 'warm') return true;
+                    if (needMedical && item[4] === 'medical') return true;
+                    return !needFood && !needWarm && !needMedical; // 不急需则全随机
+                });
+                const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
+                const item = randChoice(pool);
+
+                // 放入旅行者背包（不是你的背包）
+                travelerState.backpack.push([item[0], nowSec, 1]);
+
+                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                const prep = (item[0] === '树皮干' || item[0] === '干苔藓' || item[0] === '碎骨针') ? '刨' : '摸';
+                travelerState.log.push(`${timeStr} 旅行者从雪里${prep}出了点${item[0]}。`);
+                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            }
             forceSaveAll();
         }
 
