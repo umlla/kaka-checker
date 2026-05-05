@@ -280,6 +280,19 @@
                 ["雪地帐篷","用特殊防水布料制成的帐篷，能抵御暴风雪的侵袭。耐久：5","你试着搭起帐篷，结构稳固，布料厚实，感觉在里面过夜应该没问题。","旅行者在暴风雪来临前迅速搭好帐篷，躲在里面听着外面的风呼啸，身体慢慢恢复了温暖。","warm",{"durability":5, "onUse":{"temp":4, "health":2}}],
             ],
         };
+        // 旅行者自己找到的劣质求生物品
+        const SURVIVAL_SCRAPS = [
+            ["树皮干", "从冻僵的桦树上剥下的内层树皮，嚼起来像木屑，勉强能吞下去。", "你咬了一小口，干涩的纤维塞满牙缝，几乎感觉不到任何营养，但至少胃里有了点东西。", "旅行者皱着眉头啃着树皮，每咽一口都要喝口雪水冲冲嗓子。", "food", {"hunger": 3}],
+            ["干苔藓", "从岩石上刮下来的灰绿色苔藓，晒干后像一团乱麻，烧起来只有微弱的青烟。", "你捏了一小撮放进嘴里，一股土腥味直冲天灵盖，嚼了半天才咽下去，肚子里那团火勉强没有熄灭。", "旅行者把苔藓揉成小球塞进嘴里，表情扭曲地咽了下去，然后赶紧灌了一大口冰水。", "food", {"hunger": 2}],
+            ["冻草根", "从冻土里硬拔出来的草根，硬得像铁丝，得用体温捂软了才能咬得动。", "你捂了半天才把草根焐热，咬下去嘎嘣脆，带着一丝微甜的汁水，这是这几天最像样的一顿了。", "旅行者像兔子一样喀嚓喀嚓地嚼着草根，吃完后还仔细舔了舔手指上沾的泥。", "food", {"hunger": 4}],
+            ["破麻布片", "不知从哪件废弃衣服上扯下的麻布，裹在身上能挡一点风，但到处是破洞。", "你把布片缠在手臂上，风从破洞里钻进来凉飕飕的，但好歹比光着胳膊强一丁点。", "旅行者用麻布裹住了冻红的双手，两只手像戴了一双乞丐手套，不过确实暖和了一丝丝。", "warm", {"temp": 2}],
+            ["烂皮绳", "一截断掉的驯鹿皮绳，已经磨得起了毛边，勉强可以捆扎东西或当临时止血带。", "你试着扯了扯，还没怎么用力就吱吱作响，但用它扎紧伤口应该能撑一阵子。", "旅行者用牙和右手配合，把皮绳死死扎在上臂，伤口的血总算是止住了。", "medical", {"health": 3}],
+            ["雪浸火柴", "一盒在雪里泡过的火柴，大部分已经划不着了，但仔细拨拉总有那么一两根还能用。", "你小心翼翼地拨开火柴头，试了五六根之后终于擦出一朵火苗，赶紧用手护着，生怕被风吹灭。", "旅行者跪在雪地里划火柴，连续失败后终于燃起一朵微弱的火焰，他赶紧用身体挡住风。", "warm", {"temp": 3}],
+            ["干羽梗", "不知名大鸟脱落的羽毛梗，中间是空心的，可以吸一点融化的雪水，权当吸管。", "你对着光看了看羽梗，管子里还残留着一丁点冻住的露水，你用力吸了一口，冰得舌头疼。", "旅行者把羽梗插进雪里，等化出几滴水就连忙凑上去吸，像一只啄食的雪鹀。", "food", {"hunger": 1}],
+            ["碎骨针", "不知什么动物的碎骨片，边缘磨得还算锋利，可以当简易的针或鱼钩。", "你小心地拿起碎骨片，边缘还算锋利，用来挑水泡或缝补衣服应该够用。", "旅行者找了根细藤系在骨针上，做成一个歪歪扭扭的鱼钩，虽然成功率不高但总比没有强。", "support", {"mood": 2}],
+            ["灰烬盐", "从篝火灰烬里筛出的粗盐，混着草木灰，味道又苦又涩，但能补充一点电解质。", "你用手指沾了一小撮，舔了一口，苦得皱起眉头，但身体确实需要这点盐分。", "旅行者用雪水把灰烬盐化开，捏着鼻子灌了下去，味道难以形容，但抽筋的小腿总算好了一些。", "food", {"health": 1, "mood": -2}],
+            ["旧皮绑腿", "一条被遗弃的旧皮绑腿，上面的扣子已经生锈，但还能紧紧裹住小腿防止冻伤。", "你用力拉紧绑腿，皮料发出一阵吱嘎声，裹上后小腿终于不再那么僵硬了。", "旅行者蹲下来仔细绑好皮绑腿，站起来蹬了蹬腿，感觉像是捡回了一双新脚。", "warm", {"temp": 2, "health": 1}]
+        ];
         const THANKS_POOL = {
             food: [
                 "“太及时了！我肚子正咕咕叫呢。”旅行者眼睛一亮。",
@@ -537,18 +550,18 @@
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-            // 直接进行自然衰减，不再检查极端状态
+            // 自然衰减（不直接扣健康，健康由 applyEffect 统一处理）
             travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
             travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
             travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
-            if (travelerState.hunger < 20) {
-                travelerState.health = Math.max(0, travelerState.health - hours * 4);
-            }
+            // 健康衰减移入 applyEffect，避免重复
+
             travelerState.temperature = clamp(travelerState.temperature, -30, 10);
             travelerState.health = clamp(travelerState.health, 0, 100);
             travelerState.hunger = clamp(travelerState.hunger, 0, 100);
             travelerState.mood = clamp(travelerState.mood, 0, 100);
-                // 阈值比较：只有当数值变化明显时才标记为脏
+
+            // 阈值比较：只有当数值变化明显时才标记为脏
             const dTemp = Math.abs(travelerState.temperature - lastSavedTraveler.temperature);
             const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
             const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
@@ -556,6 +569,26 @@
 
             if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3) {
                 markDirty();
+            }
+
+            // ---------- 离线自我维持 ----------
+            if (hours > 0.1) { // 离线超过6分钟
+                const cycles = Math.floor(hours * 2); // 每小时尝试2次使用物品
+                for (let i = 0; i < cycles; i++) {
+                    autoUseBackpackItem();
+                }
+                // 如果背包仍然为空，尝试自己找点劣质求生品
+                if (travelerState.backpack.length === 0 && SURVIVAL_SCRAPS.length > 0) {
+                    // 每小时有40%概率找到一样东西，最多累计到90%
+                    const findChance = Math.min(0.9, hours * 0.15);
+                    if (Math.random() < findChance) {
+                        const item = randChoice(SURVIVAL_SCRAPS);
+                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                        travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}。`);
+                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                    }
+                }
             }
 
             travelerState.lastUpdate = nowSec;
@@ -566,6 +599,11 @@
             if (effect.hunger) travelerState.hunger = clamp(travelerState.hunger + effect.hunger, 0, 100);
             if (effect.mood) travelerState.mood = clamp(travelerState.mood + effect.mood, 0, 100);
             if (effect.temp) travelerState.temperature = clamp(travelerState.temperature + effect.temp, -30, 10);
+
+            // 饱腹过低导致的生命衰减（每8秒损失1点，离线由 updateTravelerState 中的 self-sustain 来模拟）
+            if (travelerState.hunger < 20) {
+                travelerState.health = clamp(travelerState.health - 1, 0, 100);
+            }
         }
         function formatEffects(effects) {
             const emoji = { health: '❤️', hunger: '🍞', mood: '😊', temp: '🌡️' };
