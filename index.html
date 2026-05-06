@@ -506,6 +506,8 @@
         function getItemByName(name) {
             for (const pool of Object.values(CARD_POOL)) for (const item of pool) if (item[0] === name) return item;
             for (const pool of Object.values(DROP_POOL)) for (const item of pool) if (item[0] === name) return item;
+            // 新增：搜索求生破烂池
+            for (const item of SURVIVAL_SCRAPS) if (item[0] === name) return item;
             return null;
         }
         function getTravelerUseText(name) { const i = getItemByName(name); return i ? i[3] : null; }
