@@ -975,7 +975,8 @@
             intervalId: null,
             lastTickTime: null,
             taskName: '番茄钟专注',
-            mode: 'countdown'  // 新增：'countdown' 倒计时 / 'stopwatch' 正计时
+            mode: 'countdown' , // 新增：'countdown' 倒计时 / 'stopwatch' 正计时
+            startTime: 0 
         };
 
         function formatTomatoTime(sec, mode) {
@@ -1021,6 +1022,11 @@
 
             const stopBtn = document.getElementById('btnTomatoStop');
             if (stopBtn) stopBtn.disabled = (tomatoState.status === 'idle');
+            // 更新网页标题
+            const timeStr = tomatoState.mode === 'stopwatch'
+                ? formatTomatoTime(tomatoState.elapsedFocusSeconds, 'stopwatch')
+                : formatTomatoTime(tomatoState.remainingSeconds, 'countdown');
+            document.title = `${timeStr} - 卡卡查克 · 雪原冒险`;
         }
 
         function startTomato() {
@@ -1030,7 +1036,7 @@
             }
             if (tomatoState.status === 'idle' || tomatoState.status === 'paused') {
                 tomatoState.status = 'running';
-                tomatoState.lastTickTime = Date.now();
+                tomatoState.startTime = Date.now(); // 新增：记录启动时间戳
                 if (!tomatoState.intervalId) {
                     tomatoState.intervalId = setInterval(tickTomato, 1000);
                 }
@@ -1113,34 +1119,21 @@
 
         function tickTomato() {
             if (tomatoState.status !== 'running') return;
+
             const now = Date.now();
-            const delta = (now - tomatoState.lastTickTime) / 1000;
-            tomatoState.lastTickTime = now;
+            const totalElapsed = (now - tomatoState.startTime) / 1000; // 从启动到现在总秒数
 
-            // 检测时间跳跃（大于3秒视为休眠等异常）
-            if (delta > 3) {
-                // 暂停番茄钟，保留已累积的专注时间
-                tomatoState.status = 'paused';
-                if (tomatoState.intervalId) {
-                    clearInterval(tomatoState.intervalId);
-                    tomatoState.intervalId = null;
-                }
-                showToast('⏸ 检测到时间跳跃，番茄钟已暂停。', 3500);
-                updateTomatoUI();
-                return;
-            }
-
-            // 正常计时
             if (tomatoState.mode === 'stopwatch') {
-                tomatoState.elapsedFocusSeconds += delta;
+                tomatoState.elapsedFocusSeconds = totalElapsed;
             } else {
-                tomatoState.remainingSeconds -= delta;
-                tomatoState.elapsedFocusSeconds += delta;
-                if (tomatoState.remainingSeconds <= 0) {
+                const remaining = tomatoState.totalSeconds - totalElapsed;
+                tomatoState.elapsedFocusSeconds = totalElapsed;
+                if (remaining <= 0) {
                     tomatoState.remainingSeconds = 0;
                     stopTomato(true);
                     return;
                 }
+                tomatoState.remainingSeconds = remaining;
             }
             updateTomatoUI();
         }
