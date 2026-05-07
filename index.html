@@ -1064,6 +1064,7 @@
         function stopTomato(record = true) {
             if (tomatoState.status === 'idle') return;
             const now = Date.now();
+            // 使用绝对时间差计算真正的专注秒数
             const realElapsed = tomatoState.startTime 
                 ? (now - tomatoState.startTime) / 1000 
                 : tomatoState.elapsedFocusSeconds;
@@ -1074,11 +1075,12 @@
                 lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
 
-                // 掉落逻辑：专注 ≥15 分钟开始掉落
+                // ---------- 掉落逻辑 ----------
                 if (minutes >= 15) {
-                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4);
+                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4); // 1~4个槽位
                     for (let i = 0; i < slotCount; i++) {
                         let preferRarity = '普通';
+                        // ≥45分钟才有稀有/传说概率
                         if (minutes >= 45) {
                             const rand = Math.random();
                             if (rand < 0.1) {
@@ -1087,6 +1089,7 @@
                                 preferRarity = '稀有';
                             }
                         }
+
                         if (preferRarity === '普通') {
                             const item = dropCommonItem();
                             if (item) {
@@ -1099,11 +1102,11 @@
                                 lastTomatoDrops.push(`${preferRarity} · ${item[0]} x1`);
                                 msg += ` 🎒 获得【${item[0]}】`;
                             } else {
-                                // 池空降级为普通
+                                // 池空，退化为普通
                                 const commonItem = dropCommonItem();
                                 if (commonItem) {
                                     lastTomatoDrops.push(`普通（${preferRarity}池空） · ${commonItem[0]} x1`);
-                                    msg += ` 🎒 获得【${commonItem[0]}】(${preferRarity}池已空)`;
+                                    msg += ` 🎒 获得【${commonItem[0]}】（${preferRarity}池已空）`;
                                 }
                             }
                         }
@@ -1118,15 +1121,16 @@
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
 
-            if (tomatoState.intervalId) {
-                clearInterval(tomatoState.intervalId);
-                tomatoState.intervalId = null;
-            }
-            tomatoState.status = 'idle';
-            tomatoState.elapsedFocusSeconds = 0;
-            tomatoState.remainingSeconds = tomatoState.totalSeconds;
-            updateTomatoUI();
-        }
+    // 清理计时器与状态
+    if (tomatoState.intervalId) {
+        clearInterval(tomatoState.intervalId);
+        tomatoState.intervalId = null;
+    }
+    tomatoState.status = 'idle';
+    tomatoState.elapsedFocusSeconds = 0;
+    tomatoState.remainingSeconds = tomatoState.totalSeconds;
+    updateTomatoUI();
+}
 
         function tickTomato() {
             if (tomatoState.status !== 'running') return;
