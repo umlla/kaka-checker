@@ -1064,7 +1064,6 @@
         function stopTomato(record = true) {
             if (tomatoState.status === 'idle') return;
             const now = Date.now();
-            // 计算真实专注秒数
             const realElapsed = tomatoState.startTime 
                 ? (now - tomatoState.startTime) / 1000 
                 : tomatoState.elapsedFocusSeconds;
@@ -1074,8 +1073,43 @@
                 addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
                 lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
-                // … 后续掉落逻辑不变
-                // …
+
+                // 掉落逻辑：专注 ≥15 分钟开始掉落
+                if (minutes >= 15) {
+                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4);
+                    for (let i = 0; i < slotCount; i++) {
+                        let preferRarity = '普通';
+                        if (minutes >= 45) {
+                            const rand = Math.random();
+                            if (rand < 0.1) {
+                                preferRarity = '传说';
+                            } else if (rand < 0.3) {
+                                preferRarity = '稀有';
+                            }
+                        }
+                        if (preferRarity === '普通') {
+                            const item = dropCommonItem();
+                            if (item) {
+                                lastTomatoDrops.push(`普通 · ${item[0]} x1`);
+                                msg += ` 🎒 获得【${item[0]}】`;
+                            }
+                        } else {
+                            const item = dropRareOrLegendaryItem(preferRarity);
+                            if (item) {
+                                lastTomatoDrops.push(`${preferRarity} · ${item[0]} x1`);
+                                msg += ` 🎒 获得【${item[0]}】`;
+                            } else {
+                                // 池空降级为普通
+                                const commonItem = dropCommonItem();
+                                if (commonItem) {
+                                    lastTomatoDrops.push(`普通（${preferRarity}池空） · ${commonItem[0]} x1`);
+                                    msg += ` 🎒 获得【${commonItem[0]}】(${preferRarity}池已空)`;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 showToast(msg, 4000);
                 forceSaveAll();
                 renderPanel('checkin');
@@ -1084,7 +1118,6 @@
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
 
-            // 清理计时器与状态
             if (tomatoState.intervalId) {
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
