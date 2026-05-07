@@ -1043,31 +1043,63 @@
                 pauseTomato();
                 return;
             }
-            if (tomatoState.status === 'idle' || tomatoState.status === 'paused') {
+            if (tomatoState.status === 'idle') {
+                // 全新开始
                 tomatoState.status = 'running';
-                tomatoState.startTime = Date.now(); // 新增：记录启动时间戳
-                if (!tomatoState.intervalId) {
-                    tomatoState.intervalId = setInterval(tickTomato, 1000);
+                tomatoState.startTime = Date.now();
+                tomatoState.elapsedFocusSeconds = 0;
+                tomatoState.remainingSeconds = tomatoState.totalSeconds;
+            } else if (tomatoState.status === 'paused') {
+                // 从暂停恢复：调整 startTime 以保持累计
+                tomatoState.status = 'running';
+                const now = Date.now();
+                if (tomatoState.mode === 'countdown') {
+                    const accumulated = tomatoState.totalSeconds - tomatoState.remainingSeconds;
+                    tomatoState.startTime = now - (accumulated * 1000);
+                } else {
+                    tomatoState.startTime = now - (tomatoState.elapsedFocusSeconds * 1000);
                 }
-                updateTomatoUI();
             }
+            if (!tomatoState.intervalId) {
+                tomatoState.intervalId = setInterval(tickTomato, 1000);
+            }
+            updateTomatoUI();
         }
 
         function pauseTomato() {
             if (tomatoState.status === 'running') {
-                tomatoState.elapsedFocusSeconds += (Date.now() - tomatoState.lastTickTime) / 1000;
+                const now = Date.now();
+                const delta = (now - tomatoState.startTime) / 1000;
+                if (tomatoState.mode === 'stopwatch') {
+                    tomatoState.elapsedFocusSeconds += delta;
+                } else {
+                    tomatoState.remainingSeconds = Math.max(0, tomatoState.totalSeconds - (tomatoState.elapsedFocusSeconds + delta));
+                    tomatoState.elapsedFocusSeconds += delta;
+                }
                 tomatoState.status = 'paused';
+                clearInterval(tomatoState.intervalId);
+                tomatoState.intervalId = null;
                 updateTomatoUI();
             }
         }
 
         function stopTomato(record = true) {
             if (tomatoState.status === 'idle') return;
-            const now = Date.now();
-            // 计算实际专注秒数（基于开始时间戳）
-            const realElapsed = tomatoState.startTime 
-                ? (now - tomatoState.startTime) / 1000 
-                : tomatoState.elapsedFocusSeconds;
+
+            let realElapsed = 0;
+            if (tomatoState.status === 'running') {
+                const now = Date.now();
+                if (tomatoState.mode === 'stopwatch') {
+                    realElapsed = tomatoState.elapsedFocusSeconds + (now - tomatoState.startTime) / 1000;
+                } else {
+                    const previousElapsed = tomatoState.totalSeconds - tomatoState.remainingSeconds;
+                    realElapsed = previousElapsed + (now - tomatoState.startTime) / 1000;
+                }
+            } else if (tomatoState.status === 'paused') {
+                realElapsed = tomatoState.elapsedFocusSeconds;
+            }
+
+            console.log('停止番茄钟，realElapsed:', realElapsed.toFixed(1), '秒');
 
             if (record && realElapsed >= 60) {
                 const minutes = Math.floor(realElapsed / 60);
@@ -1075,34 +1107,30 @@
                 lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
 
-                // 掉落逻辑：专注 ≥15 分钟开始掉落
                 if (minutes >= 15) {
-                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4); // 槽位数量
+                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4);
+                    console.log('进入掉落，专注', minutes, '分钟，槽位', slotCount, '普通池数量', DROP_POOL["普通"].length);
                     for (let i = 0; i < slotCount; i++) {
                         let preferRarity = '普通';
-                        // ≥45分钟时，稀有/传说概率
                         if (minutes >= 45) {
                             const rand = Math.random();
-                            if (rand < 0.1) {
-                                preferRarity = '传说';
-                            } else if (rand < 0.3) {
-                                preferRarity = '稀有';
-                            }
+                            if (rand < 0.1) preferRarity = '传说';
+                            else if (rand < 0.3) preferRarity = '稀有';
                         }
-
                         if (preferRarity === '普通') {
                             const item = dropCommonItem();
+                            console.log('尝试掉落普通:', item);
                             if (item) {
                                 lastTomatoDrops.push('普通 · ' + item[0]);
                                 msg += ' 🎒 获得【' + item[0] + '】';
                             }
                         } else {
                             const item = dropRareOrLegendaryItem(preferRarity);
+                            console.log('尝试掉落' + preferRarity + ':', item);
                             if (item) {
                                 lastTomatoDrops.push(preferRarity + ' · ' + item[0]);
                                 msg += ' 🎒 获得【' + item[0] + '】';
                             } else {
-                                // 池空降级为普通
                                 const commonItem = dropCommonItem();
                                 if (commonItem) {
                                     lastTomatoDrops.push('普通（' + preferRarity + '池空） · ' + commonItem[0]);
@@ -1121,7 +1149,6 @@
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
 
-            // 清理计时器
             if (tomatoState.intervalId) {
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
@@ -1134,9 +1161,8 @@
 
         function tickTomato() {
             if (tomatoState.status !== 'running') return;
-
             const now = Date.now();
-            const totalElapsed = (now - tomatoState.startTime) / 1000; // 从启动到现在总秒数
+            const totalElapsed = (now - tomatoState.startTime) / 1000;
 
             if (tomatoState.mode === 'stopwatch') {
                 tomatoState.elapsedFocusSeconds = totalElapsed;
