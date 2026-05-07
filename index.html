@@ -594,10 +594,6 @@
                     findCount = Math.min(findCount, 8);    // 最多8件
 
                     for (let i = 0; i < findCount; i++) {
-                        // 每次求生会消耗体力，并使人沮丧
-                        travelerState.health = clamp(travelerState.health - 1, 0, 100);
-                        travelerState.mood = clamp(travelerState.mood - 2, 0, 100);
-
                         // 优先选择当前最需要的类别
                         const needFood = travelerState.hunger < 30;
                         const needWarm = travelerState.temperature < -15;
@@ -607,26 +603,42 @@
                             if (needFood && item[4] === 'food') return true;
                             if (needWarm && item[4] === 'warm') return true;
                             if (needMedical && item[4] === 'medical') return true;
-                            if (!needFood && !needWarm && !needMedical) return true; // 不急需则随机
+                            if (!needFood && !needWarm && !needMedical) return true;
                             return false;
                         });
                         const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
                         const item = randChoice(pool);
-                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
 
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}。`);
+
+                        // 70% 概率当场用掉
+                        if (Math.random() < 0.7) {
+                            const effect = item[5];
+                            if (effect) applyEffect(effect);
+                            travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}，当场就用掉了。`);
+                        } else {
+                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                            travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}，小心地收进背包。`);
+                        }
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                     }
                 }
-                // 如果没到危机程度，只是背包空了，也有小概率自己找点东西（原来的逻辑保留）
+                // 如果没到危机程度，只是背包空了，也有小概率自己找点东西
                 else if (travelerState.backpack.length === 0 && SURVIVAL_SCRAPS.length > 0) {
                     const findChance = Math.min(0.6, hours * 0.1); // 最高60%概率
                     if (Math.random() < findChance) {
                         const item = randChoice(SURVIVAL_SCRAPS);
-                        travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}。`);
+
+                        // 70% 概率当场用掉
+                        if (Math.random() < 0.7) {
+                            const effect = item[5];
+                            if (effect) applyEffect(effect);
+                            travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，当场就用掉了。`);
+                        } else {
+                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
+                            travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，小心地收进背包。`);
+                        }
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                     }
                 }
@@ -777,22 +789,13 @@
                 updatedAt: nowSec,
             };
                 // 在线拾荒：旅行者独自前行时，有概率捡到劣质求生品
-    // 只为濒危状态拼命，正常时偶尔捡点小破烂
             const isStarvingOnline = travelerState.hunger < 30;
             const isFreezingOnline = travelerState.temperature < -10;
             const isDyingOnline = travelerState.health < 25;
 
-            // 基础概率 8%，危机时提升到 25%
             const scavengeChance = (isStarvingOnline || isFreezingOnline || isDyingOnline) ? 0.25 : 0.08;
 
             if (Math.random() < scavengeChance && SURVIVAL_SCRAPS.length > 0) {
-                // 在危机状态下寻找，付出一点代价
-                if (isStarvingOnline || isFreezingOnline || isDyingOnline) {
-                    travelerState.health = clamp(travelerState.health - 1, 0, 100);
-                    travelerState.mood = clamp(travelerState.mood - 2, 0, 100);
-                }
-
-                // 优先选择当前最需要的类别
                 const needFood = travelerState.hunger < 30;
                 const needWarm = travelerState.temperature < -15;
                 const needMedical = travelerState.health < 30;
@@ -801,17 +804,23 @@
                     if (needFood && item[4] === 'food') return true;
                     if (needWarm && item[4] === 'warm') return true;
                     if (needMedical && item[4] === 'medical') return true;
-                    return !needFood && !needWarm && !needMedical; // 不急需则全随机
+                    return !needFood && !needWarm && !needMedical;
                 });
                 const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
                 const item = randChoice(pool);
 
-                // 放入旅行者背包（不是你的背包）
-                travelerState.backpack.push([item[0], nowSec, 1]);
-
                 const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                const prep = (item[0] === '树皮干' || item[0] === '干苔藓' || item[0] === '碎骨针') ? '刨' : '摸';
-                travelerState.log.push(`${timeStr} 旅行者从雪里${prep}出了点${item[0]}。`);
+
+                // 80% 概率当场用掉
+                if (Math.random() < 0.8) {
+                    const effect = item[5];
+                    if (effect) applyEffect(effect);
+                    travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，当场就用掉了。`);
+                } else {
+                    travelerState.backpack.push([item[0], nowSec, 1]);
+                    travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，小心地收进背包。`);
+                }
+
                 if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
             }
             forceSaveAll();
