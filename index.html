@@ -544,7 +544,7 @@
             userData.cards.forEach(c => names.add(c[0]));
             travelerState.backpack.forEach(([name]) => names.add(name));
             return names;
-}
+        }
 
         // ==================== 旅行者状态 ====================
         function updateTravelerState(nowSec = Date.now()/1000) {
@@ -1705,12 +1705,10 @@
             }, 30000);
         }
         // ==================== 番茄钟掉落辅助函数 ====================
-        // --- 普 通 掉 落（过滤已拥有） ---
+        // --- 普 通 掉 落 ---
         function dropCommonItem() {
-            const ownedNames = getAllOwnedNames();
-            const available = DROP_POOL["普通"].filter(item => !ownedNames.has(item[0]));
-            if (available.length === 0) return null;
-            const item = randChoice(available);
+            if (DROP_POOL["普通"].length === 0) return null;
+            const item = randChoice(DROP_POOL["普通"]);
             addUserItem(item[0], item[1]);
             return item;
         }
@@ -1721,7 +1719,7 @@
             const pool = DROP_POOL[rarity];
             if (!pool || pool.length === 0) return null;
             const available = pool.filter(item => !ownedNames.has(item[0]));
-            if (available.length === 0) return null;    // 池空，返回 null，由调用处降级处理
+            if (available.length === 0) return null;
             const item = randChoice(available);
             addUserItem(item[0], item[1]);
             return item;
