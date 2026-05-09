@@ -165,6 +165,151 @@
             50% { transform: translateY(50vh) scale(1.2); opacity: 0.8; }
             100% { transform: translateY(105vh) scale(0.8); opacity: 0.3; }
         }
+        /* ========== 濒死梦境覆盖层 ========== */
+        .dream-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100; /* 高于所有游戏元素 */
+            pointer-events: none; /* 默认隐藏时不阻挡交互 */
+            background: linear-gradient(180deg, #f0f8e8 0%, #d0e8d0 40%, #b0d0a0 100%);
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            transition: filter 2s ease, opacity 2s ease;
+        }
+        .dream-overlay.active {
+            pointer-events: auto; /* 显示时可交互 */
+        }
+        .dream-overlay.fading {
+            filter: blur(8px) brightness(0.3);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 梦境内部元素：阳光、草地、花瓣、卡片等 */
+        .dream-overlay .sun-glow {
+            position: fixed; top: 5%; left: 50%; transform: translateX(-50%);
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(255,245,210,0.5) 0%, transparent 70%);
+            border-radius: 50%; z-index: 101;
+            animation: sunPulse 10s ease-in-out infinite alternate;
+        }
+        @keyframes sunPulse {
+            0% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0.85; transform: translateX(-50%) scale(1.12); }
+        }
+
+        .dream-overlay .ground {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 28%;
+            background: linear-gradient(180deg, rgba(160,200,140,0.2) 0%, rgba(120,160,100,0.45) 50%, rgba(90,140,70,0.55) 100%);
+            z-index: 101;
+        }
+
+        .dream-overlay .petals-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 102;
+        }
+        .dream-overlay .petal {
+            position: absolute; top: -50px; font-size: 1.3rem;
+            user-select: none;
+            animation: petalFall linear infinite;
+        }
+        @keyframes petalFall {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            25% { transform: translateY(25vh) rotate(100deg) translateX(35px); opacity: 0.7; }
+            50% { transform: translateY(50vh) rotate(200deg) translateX(-25px); opacity: 0.5; }
+            75% { transform: translateY(75vh) rotate(300deg) translateX(30px); opacity: 0.35; }
+            100% { transform: translateY(108vh) rotate(400deg) translateX(-18px); opacity: 0.1; }
+        }
+
+        .dream-card {
+            position: relative; z-index: 103;
+            background: rgba(255,255,255,0.22); backdrop-filter: blur(12px);
+            border-radius: 24px; padding: 34px 28px;
+            max-width: 480px; width: 90%;
+            text-align: center;
+            box-shadow: 0 8px 36px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.45);
+            margin: auto;
+        }
+        .dream-card h2 {
+            font-size: 2.2rem; margin-bottom: 6px; color: #3a5a3a;
+            font-weight: 450; letter-spacing: 0.06em;
+        }
+        .dream-card .subtitle {
+            font-size: 0.85rem; color: #6a8a6a; margin-bottom: 16px;
+        }
+        .dream-card .description {
+            font-size: 0.95rem; color: #5a7a5a; line-height: 1.9; margin: 14px 0;
+        }
+        .dream-card .btn-sleep {
+            position: relative;
+            display: inline-block; margin-top: 18px; padding: 12px 28px;
+            background: rgba(130,170,130,0.25); border: 1px solid rgba(80,120,80,0.45);
+            border-radius: 30px; color: #3a5a3a; font-size: 0.95rem;
+            cursor: pointer; transition: 0.35s; letter-spacing: 0.04em;
+        }
+        .dream-card .btn-sleep:hover {
+            background: rgba(110,155,110,0.45); color: #1e3a1e; transform: scale(1.03);
+        }
+        .dream-card .btn-wake {
+            position: absolute;           /* 相对于 .btn-sleep 定位 */
+            left: 100%;                   /* 紧贴主按钮右侧 */
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 12px;            /* 与主按钮的间距 */
+            padding: 6px 14px;
+            font-size: 0.72rem;
+            background: rgba(200,160,120,0.25);
+            border: 1px solid rgba(160,120,80,0.4);
+            border-radius: 20px;
+            color: #5a4a3a;
+            cursor: pointer;
+            transition: opacity 0.3s, background 0.3s;
+            opacity: 0;                   /* 初始透明，占位不跳动 */
+            white-space: nowrap;
+        }
+
+        .dream-card .btn-wake.show {      /* 新增：出现时 */
+            opacity: 1;
+        }
+
+        .dream-card .btn-wake:hover {
+            background: rgba(180,140,100,0.4);
+            color: #2a1a0a;
+        }
+
+        /* 呼喊文字 */
+        .dream-overlay .shout-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 150;
+        }
+        .dream-overlay .shout-text {
+            position: absolute;
+            font-size: 1.8rem; font-weight: 600; letter-spacing: 0.08em;
+            color: rgba(220, 240, 255, 0.95);
+            text-shadow: 0 0 12px rgba(180,210,255,0.8), 0 0 30px rgba(140,180,240,0.5), 0 2px 8px rgba(0,0,0,0.25);
+            white-space: nowrap;
+            animation: shoutFade 2.2s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes shoutFade {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            30% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+            70% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+        }
+
+        /* 黑暗覆盖层（醒来时使用） */
+        .dream-dark-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0e17; z-index: 200;
+            pointer-events: none; opacity: 0;
+            transition: opacity 2.5s ease;
+        }
+        .dream-dark-overlay.active {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -487,10 +632,126 @@
             hunger: travelerState.hunger,
             mood: travelerState.mood
         };
+        let dreamTriggered = false;      // 防止重复触发
+        let dreamClickCount = 0;         // 继续沉睡点击次数
+        const DREAM_MAX_CLICKS = 5;      // 出现醒来按钮所需点击数
+        let dreamPetalInterval = null;   // 保存花瓣生成定时器，便于停止
 
         function markDirty() {
             isDirty = true;
         }
+        // 显示梦境覆盖层
+    function showDream() {
+        if (dreamTriggered) return;
+        dreamTriggered = true;
+        const overlay = document.getElementById('dreamOverlay');
+        if (!overlay) return;
+        overlay.style.display = 'flex';
+        overlay.classList.add('active');
+        dreamClickCount = 0;
+        document.getElementById('dreamBtnWake').style.display = 'none'; // 隐藏醒来按钮
+        // 启动花瓣
+        startDreamPetals();
+        // 绑定按钮事件（使用全局函数，已在 window 上暴露）
+    }
+
+    // 隐藏梦境覆盖层（醒来）
+    function hideDream() {
+        const overlay = document.getElementById('dreamOverlay');
+        if (!overlay) return;
+        // 停止花瓣
+        stopDreamPetals();
+        // 渐暗效果
+        document.getElementById('dreamDarkOverlay').classList.add('active');
+        overlay.classList.add('fading');
+        // 恢复旅行者状态
+        travelerState.health = clamp(travelerState.health + 25, 0, 100);
+        travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
+        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+        travelerState.log.push(`${timeStr} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
+        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+        forceSaveAll();
+        // 延迟移除覆盖层，配合动画
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.classList.remove('fading');
+            document.getElementById('dreamDarkOverlay').classList.remove('active');
+            dreamTriggered = false; // 允许再次触发（如果你希望再次濒死时弹出）
+        }, 2500);
+    }
+
+    // 处理“继续沉睡”点击
+    function handleDreamSleep() {
+        dreamClickCount++;
+        // 随机呼喊
+        const shouts = [
+            '队长！！',
+            '小周！别睡！',
+            '你答应过要回来的……',
+            '不要一个人……',
+            '快醒醒！',
+            '我们找到补给箱了！',
+            '极光下面等你！',
+            '暴风雪要来了……',
+            '冰层要裂了！！',
+            '起来啊……求你了',
+        ];
+        const layer = document.getElementById('dreamShoutLayer');
+        let text;
+        if (dreamClickCount >= 20) {
+            text = '这是哪里？';
+        } else {
+            text = shouts[Math.floor(Math.random() * shouts.length)];
+        }
+        const el = document.createElement('div');
+        el.className = 'shout-text';
+        el.textContent = text;
+        el.style.top = (15 + Math.random() * 50) + '%';
+        el.style.left = (20 + Math.random() * 60) + '%';
+        layer.appendChild(el);
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 2400);
+
+        if (dreamClickCount >= DREAM_MAX_CLICKS) {
+            const wakeBtn = document.getElementById('dreamBtnWake');
+            if (wakeBtn) wakeBtn.style.display = 'inline-block';
+        }
+    }
+
+    function startDreamPetals() {
+        const container = document.getElementById('dreamPetals');
+        if (!container) return;
+        const petalElements = [
+            '🌸','💮','🏵️',
+            '🍀','🌿','🍃','☘️',
+            '🍂','🍁',
+            '🪷','🌸','🍀','🌿'
+        ];
+    function createPetal() {
+        const petal = document.createElement('span');
+        petal.className = 'petal';
+        petal.textContent = petalElements[Math.floor(Math.random() * petalElements.length)];
+        petal.style.left = Math.random() * 100 + '%';
+        petal.style.fontSize = (0.7 + Math.random() * 1.6) + 'rem';
+        petal.style.animationDuration = (7 + Math.random() * 16) + 's';
+        petal.style.animationDelay = Math.random() * 4 + 's';
+        container.appendChild(petal);
+        const totalDuration = (parseFloat(petal.style.animationDuration) + parseFloat(petal.style.animationDelay)) * 1000 + 2000;
+        setTimeout(() => { if (petal.parentNode) petal.remove(); }, totalDuration);
+    }
+    for (let i = 0; i < 35; i++) {
+        setTimeout(createPetal, i * 180);
+    }
+    dreamPetalInterval = setInterval(createPetal, 1400);
+}
+
+function stopDreamPetals() {
+    if (dreamPetalInterval) {
+        clearInterval(dreamPetalInterval);
+        dreamPetalInterval = null;
+    }
+    const container = document.getElementById('dreamPetals');
+    if (container) container.innerHTML = ''; // 清空花瓣
+}
 
         function forceSaveAll() {
             saveJSON(LS_KEYS.userData, userData);
@@ -1298,6 +1559,10 @@
             document.getElementById('hungerBar').style.width = t.hunger + '%';
             document.getElementById('moodBar').style.width = t.mood + '%';
             document.getElementById('weatherTag').textContent = '☁️ ' + adventureState.weather;
+            // 在 updateTravelerBar 的末尾，加入以下代码（放在 } 之前）
+            if (travelerState.health <= 5 && !dreamTriggered) {
+                showDream();
+            }
             
         }
 
@@ -1767,6 +2032,14 @@
             forceSaveAll();
             initSnowfall(adventureState.weather); // 改为带参数
             initTabs();
+                // 梦境按钮绑定
+            const sleepBtn = document.getElementById('dreamBtnSleep');
+            if (sleepBtn) sleepBtn.addEventListener('click', handleDreamSleep);
+            const wakeBtn = document.getElementById('dreamBtnWake');
+            if (wakeBtn) wakeBtn.addEventListener('click', hideDream);
+            // 将关键函数暴露给内联事件（备用）
+            window.handleDreamSleep = handleDreamSleep;
+            window.hideDream = hideDream;
             startTickers();
             renderPanel('checkin');
             updateTravelerBar();
@@ -1782,5 +2055,27 @@
         });
     })();
 </script>
+<!-- ==================== 濒死梦境覆盖层 ==================== -->
+<div id="dreamOverlay" class="dream-overlay" style="display:none;">
+    <div class="dream-dark-overlay" id="dreamDarkOverlay"></div>
+    <div class="sun-glow"></div>
+    <div class="ground"></div>
+    <div class="petals-container" id="dreamPetals"></div>
+    <div class="shout-layer" id="dreamShoutLayer"></div>
+
+    <div class="dream-card">
+        <h2>🌸 温暖的草地</h2>
+        <p class="subtitle">—— 回忆 ——</p>
+        <p class="description">
+            风很轻，阳光像蜂蜜一样流淌在皮肤上。<br>
+            远处的炊烟、熟悉的乡音……<br>
+            一切都那么真实，又那么遥远。
+        </p>
+        <div class="btn-sleep" id="dreamBtnSleep">
+        🛌 继续沉睡
+        <span class="btn-wake" id="dreamBtnWake">🌬️ 挣扎醒来</span>
+        </div>
+    </div>
+</div>
 </body>
 </html>
