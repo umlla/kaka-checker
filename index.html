@@ -774,13 +774,18 @@
             }
 
             // 记录日志
-            const effectStr = formatEffects(eventObj.effects);
-            if (effectStr) {
-                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                travelerState.log = travelerState.log || [];
-                travelerState.log.push(`${timeStr}  ${isExtreme ? '⚠️旅行者状态危急' : '事件'}：${effectStr}`);
-                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+            if (isExtreme) {
+                // 极端状态：只记录通用文本，不显示具体效果
+                travelerState.log.push(`${timeStr} ⚠️旅行者陷入了绝境，正在艰难挣扎。`);
+            } else {
+                // 普通事件：正常显示效果数值
+                const effectStr = formatEffects(eventObj.effects);
+                if (effectStr) {
+                    travelerState.log.push(`${timeStr} 事件：${effectStr}`);
+                }
             }
+            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
 
             // 天气变化更新飘雪
             const newWeather = randChoice(WEATHERS);
