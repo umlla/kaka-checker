@@ -311,6 +311,25 @@
         .dream-dark-overlay.active {
             opacity: 1;
         }
+        .tomato-drop-area {
+            margin-top: 8px;
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+            font-size: 0.7rem;
+            color: #b0c8d8;
+        }
+        .drop-list {
+            list-style: none;
+            padding: 0;
+            margin: 4px 0 0 0;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        .drop-list li {
+            padding: 2px 0;
+            border-bottom: 1px solid #1a2a3a;
+            font-size: 0.68rem;
+        }
     </style>
 </head>
 <body>
@@ -349,6 +368,7 @@
         </div>
         <div id="panelContainer" class="panel-area"></div>
     </div>
+    
 </div>
 
 <script>
@@ -405,7 +425,7 @@
                 ["自热贴","撕开包装后与空气接触就能持续发热的小布贴，可贴在衣服内侧。","你撕开一张贴在胸口，不一会儿就有暖意透进来，像揣了个小暖炉。","旅行者把自热贴贴在背心内侧，那点持续的温热让他不再打哆嗦。","warm",{"temp":5}],
                 ["姜糖块","用老姜汁和少量糖熬制成的硬糖，含在嘴里能驱散寒意。","你含了一块，辛辣的姜味冲上脑门，紧接着身体就暖烘烘的。","旅行者剥开一块姜糖扔进嘴里，被辣得嘶嘶吐气，但原本发青的嘴唇很快恢复了血色。","food",{"temp":3,"mood":1}],
                 ["护耳套","用雪兔毛缝制的耳罩，皮毛蓬松柔软，能紧紧裹住双耳抵御冻伤。","你戴上去试了试，耳朵立刻像埋进了暖和的棉絮里，风声都变得遥远模糊。","旅行者把护耳套扣好，原本冻得通红的耳朵逐渐恢复了知觉，他感激地拍了拍头顶。","warm",{"temp":3,"mood":1}],
-                                ["草药嚼片", "将苦艾草和薄荷压成的薄片，嚼一嚼能提神醒脑，缓解头痛。", "你取了一片放进嘴里，苦涩中带着清凉，太阳穴的抽痛感减轻了不少。", "旅行者慢慢嚼着草药片，紧皱的眉头渐渐舒展开。", "medical", {"health": 4}],
+                ["草药嚼片", "将苦艾草和薄荷压成的薄片，嚼一嚼能提神醒脑，缓解头痛。", "你取了一片放进嘴里，苦涩中带着清凉，太阳穴的抽痛感减轻了不少。", "旅行者慢慢嚼着草药片，紧皱的眉头渐渐舒展开。", "medical", {"health": 4}],
                 ["破旧手套", "一只被遗弃的旧手套，手背处磨出了洞，但还能勉强保护手指不被冻伤。", "你套上那只破手套，虽然破了洞，但手指总算不用直接暴露在风雪里了。", "旅行者捡起破手套戴在左手上，右手揣进怀里，继续往前走。", "warm", {"temp": 2}],
                 ["幸运兔脚", "一只风干的雪兔后脚，据雪原猎人说挂在背包上能带来好运气。", "你对着兔脚端详了一番，毛茸茸的，还带着一点青草味，你把它挂在背包拉链上。", "旅行者把兔脚系在背包上，拍了拍它，似乎在祈求接下来的路途平安。", "support", {"mood": 4}],
                 ["励志纸条", "一张被揉得皱巴巴的纸条，上面用颤抖的笔迹写着“再坚持一天”。", "你展开纸条，字迹虽然潦草，却仿佛能感受到书写者当时的决心，你小心地把它夹进笔记本。", "旅行者对着纸条看了很久，然后郑重地叠好放进口袋，眼神比之前坚定了许多。", "support", {"mood": 5}],
@@ -1249,6 +1269,7 @@ function stopDreamPetals() {
 
         // ==================== 番茄钟模块 ====================
         let lastTomatoDrops = [];
+        let currentTomatoDrops = []; // 存储本次掉落的物品 { name, rarity }
         let tomatoState = {
             totalSeconds: 25 * 60,
             remainingSeconds: 25 * 60,
@@ -1359,6 +1380,7 @@ function stopDreamPetals() {
         function stopTomato(record = true) {
             if (tomatoState.status === 'idle') return;
 
+            // 计算实际专注秒数
             let realElapsed = 0;
             if (tomatoState.status === 'running') {
                 const now = Date.now();
@@ -1372,17 +1394,19 @@ function stopDreamPetals() {
                 realElapsed = tomatoState.elapsedFocusSeconds;
             }
 
-            console.log('停止番茄钟，realElapsed:', realElapsed.toFixed(1), '秒');
+            console.log('停止番茄钟，专注秒数:', realElapsed.toFixed(1));
 
             if (record && realElapsed >= 60) {
                 const minutes = Math.floor(realElapsed / 60);
                 addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
-                lastTomatoDrops = [];
                 let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
 
-                if (minutes >= 15) {
+                // 清空上次记录，准备装新掉落
+                currentTomatoDrops = [];
+
+                // ---------- 掉落逻辑 ----------
+                if (minutes >= 15) {                // 正式版用 15，测试可改为 1
                     const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4);
-                    console.log('进入掉落，专注', minutes, '分钟，槽位', slotCount, '普通池数量', DROP_POOL["普通"].length);
                     for (let i = 0; i < slotCount; i++) {
                         let preferRarity = '普通';
                         if (minutes >= 45) {
@@ -1390,23 +1414,23 @@ function stopDreamPetals() {
                             if (rand < 0.1) preferRarity = '传说';
                             else if (rand < 0.3) preferRarity = '稀有';
                         }
+
                         if (preferRarity === '普通') {
                             const item = dropCommonItem();
-                            console.log('尝试掉落普通:', item);
                             if (item) {
-                                lastTomatoDrops.push('普通 · ' + item[0]);
+                                currentTomatoDrops.push({ name: item[0], rarity: '普通' });
                                 msg += ' 🎒 获得【' + item[0] + '】';
                             }
                         } else {
                             const item = dropRareOrLegendaryItem(preferRarity);
-                            console.log('尝试掉落' + preferRarity + ':', item);
                             if (item) {
-                                lastTomatoDrops.push(preferRarity + ' · ' + item[0]);
+                                currentTomatoDrops.push({ name: item[0], rarity: preferRarity });
                                 msg += ' 🎒 获得【' + item[0] + '】';
                             } else {
+                                // 池空降级为普通
                                 const commonItem = dropCommonItem();
                                 if (commonItem) {
-                                    lastTomatoDrops.push('普通（' + preferRarity + '池空） · ' + commonItem[0]);
+                                    currentTomatoDrops.push({ name: commonItem[0], rarity: '普通（' + preferRarity + '池空）' });
                                     msg += ' 🎒 获得【' + commonItem[0] + '】（' + preferRarity + '池已空）';
                                 }
                             }
@@ -1416,12 +1440,13 @@ function stopDreamPetals() {
 
                 showToast(msg, 4000);
                 forceSaveAll();
-                renderPanel('checkin');
+                renderPanel('checkin');   // 重新渲染打卡面板（会用到 currentTomatoDrops）
                 updateTravelerBar();
             } else if (record && realElapsed < 60) {
                 showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
             }
 
+            // 清理计时器，重置番茄钟状态
             if (tomatoState.intervalId) {
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
@@ -1429,6 +1454,47 @@ function stopDreamPetals() {
             tomatoState.status = 'idle';
             tomatoState.elapsedFocusSeconds = 0;
             tomatoState.remainingSeconds = tomatoState.totalSeconds;
+            updateTomatoUI();
+        }
+
+        function tickTomato() {
+            if (tomatoState.status !== 'running') return;
+            const now = Date.now();
+            const totalElapsed = (now - tomatoState.startTime) / 1000;
+
+            if (tomatoState.mode === 'stopwatch') {
+                tomatoState.elapsedFocusSeconds = totalElapsed;
+            } else {
+                const remaining = tomatoState.totalSeconds - totalElapsed;
+                tomatoState.elapsedFocusSeconds = totalElapsed;
+                if (remaining <= 0) {
+                    tomatoState.remainingSeconds = 0;
+                    stopTomato(true);
+                    return;
+                }
+                tomatoState.remainingSeconds = remaining;
+            }
+            updateTomatoUI();
+        }
+
+        function setTomatoPreset(minutes) {
+            if (tomatoState.status !== 'idle') return;
+            tomatoState.totalSeconds = minutes * 60;
+            tomatoState.remainingSeconds = minutes * 60;
+            tomatoState.mode = 'countdown';
+            updateTomatoUI();
+        }
+
+        function toggleTomatoMode() {
+            if (tomatoState.status !== 'idle') return;
+            tomatoState.mode = tomatoState.mode === 'countdown' ? 'stopwatch' : 'countdown';
+            if (tomatoState.mode === 'stopwatch') {
+                tomatoState.elapsedFocusSeconds = 0;
+                tomatoState.remainingSeconds = 0;
+            } else {
+                tomatoState.remainingSeconds = tomatoState.totalSeconds;
+                tomatoState.elapsedFocusSeconds = 0;
+            }
             updateTomatoUI();
         }
 
@@ -1535,6 +1601,7 @@ function stopDreamPetals() {
                     adventureState = data.adventureState;
                     forceSaveAll();
                     updateTravelerBar();
+                    clearTomatoDrop();
                     const activeTab = document.querySelector('.tab-btn.active');
                     if (activeTab) renderPanel(activeTab.dataset.tab);
                     showToast('📥 存档导入成功！');
@@ -1600,19 +1667,22 @@ function stopDreamPetals() {
                     </li>`;
                 }
             }
+            // 在 renderCheckinPanel 函数内，构建掉落日志的 HTML 变量
+            let dropLogHtml = '';
+            if (currentTomatoDrops.length > 0) {
+                dropLogHtml = '<div class="tomato-drop-area" style="display:block; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">';
+                dropLogHtml += '<div class="drop-header" style="font-size:0.7rem;color:#94a3b8;">📦 本次掉落</div>';
+                dropLogHtml += '<ul class="drop-list" style="list-style:none; padding:0; margin:4px 0 0 0; max-height:80px; overflow-y:auto;">';
+                for (const drop of currentTomatoDrops) {
+                    dropLogHtml += `<li style="padding:2px 0; border-bottom:1px solid #1a2a3a; font-size:0.68rem;">· ${drop.rarity} · ${drop.name}</li>`;
+                }
+                dropLogHtml += '</ul></div>';
+            }
             // 滚动区域内容
             const scrollContent = todayCheckins.length > 0
                 ? `<ul class="checkin-list">${listHtml}</ul>`
                 : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem;">📭 今天还没有打卡记录，快来打卡吧！</div>`;
-            // 番茄钟掉落记录
-            let dropLogHtml = '';
-            if (typeof lastTomatoDrops !== 'undefined' && lastTomatoDrops.length > 0) {
-                dropLogHtml = '<div class="tomato-drop-log"><h4>📦 本次番茄钟掉落</h4><ul class="checkin-list">';
-                for (const drop of lastTomatoDrops) {
-                    dropLogHtml += `<li style="font-size:0.8rem;">· ${drop}</li>`;
-                }
-                dropLogHtml += '</ul></div>';
-            }
+            
 
             return `
             <div class="panel" style="display:flex;flex-direction:column;height:100%;">
@@ -1662,6 +1732,7 @@ function stopDreamPetals() {
                         <input type="text" id="tomatoTaskInput" placeholder="任务名" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid #1e3a5f;background:#0d1520;color:#d0d8e8;font-size:0.78rem;">
                     </div>
                     ${dropLogHtml}
+                    </div>
                 </div>
             </div>`;
         }
