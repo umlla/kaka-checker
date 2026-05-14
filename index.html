@@ -7,9 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
     <style>
         :root {
-            --bg: #0a0e17;
-            --panel: #111827dd;
-            --border: #1e3a5f;
+            --bg-color: #0a0e17;
+            --bg-gradient: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
             --text: #d0d8e8;
             --text2: #94a3b8;
             --accent: #5eb0e5;
@@ -18,20 +17,26 @@
             --legend: #f0b830;
             --success: #5cb878;
             --warm: #e89050;
-            --panel2: #141e2bdd;
             --radius: 12px;
             --radius-sm: 8px;
             --shadow: 0 4px 24px #00000055;
             --transition: 0.25s ease;
+            
+            /* 磨砂面板变量（纯半透明，无模糊） */
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
         }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: var(--bg);
+            background-color: var(--bg-color);
             color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
-            background-image: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
+            background-image: var(--bg-gradient);
             background-attachment: fixed;
         }
 
@@ -61,11 +66,29 @@
         .main-layout { display: flex; align-items: flex-start; gap: 16px; z-index: 2; margin-top: 8px; }
         .sidebar { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; z-index: 2; }
 
-        .traveler-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: flex-start; background: var(--panel2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; box-shadow: var(--shadow); backdrop-filter: blur(6px); margin: 0; }
+        .traveler-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            align-items: center;
+            justify-content: flex-start;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 8px 10px;
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            margin: 0;
+        }
         .traveler-bar .stat { display: flex; align-items: center; gap: 3px; font-size: 0.75rem; white-space: nowrap; }
         .traveler-bar .stat .icon { font-size: 1.0rem; }
         .traveler-bar .stat .val { font-weight: 600; min-width: 24px; text-align: center; }
-        .stat-bar-wrap { width: 36px; height: 4px; background: #1a2535; border-radius: 3px; overflow: hidden; }
+        .stat-bar-wrap {
+            width: 36px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            overflow: hidden;
+        }
         .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
         .fill-temp { background: linear-gradient(90deg, #4a90d9, #e89050); }
         .fill-health { background: linear-gradient(90deg, #e05555, #5cb878); }
@@ -73,30 +96,99 @@
         .fill-mood { background: linear-gradient(90deg, #7eb8da, #d0a0e0); }
 
         .tab-nav { display: flex; flex-direction: column; gap: 4px; width: 100%; }
-        .tab-btn { justify-content: flex-start; padding: 9px 12px; width: 100%; text-align: left; font-size: 0.82rem; border-radius: 22px; border: 1px solid transparent; cursor: pointer; font-weight: 500; background: var(--panel2); color: var(--text2); transition: var(--transition); white-space: nowrap; backdrop-filter: blur(4px); }
-        .tab-btn:hover { border-color: var(--border); color: var(--text); background: #1a2840dd; }
-        .tab-btn.active { background: #1e3a55dd; color: #fff; border-color: var(--accent); box-shadow: 0 0 12px #3a7bd544; }
+        .tab-btn {
+            justify-content: flex-start;
+            padding: 9px 12px;
+            width: 100%;
+            text-align: left;
+            font-size: 0.82rem;
+            border-radius: 22px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            background: var(--glass-bg);
+            
 
-        .panel-area { flex: 1; height: 560px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); backdrop-filter: blur(6px); min-width: 0; }
+            color: var(--text2);
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            border-color: var(--glass-border);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text);
+        }
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px #3a7bd544;
+        }
+        .panel-area {
+            flex: 1;
+            height: 560px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            min-width: 0;
+        }
 
         .panel { padding: 18px 20px; animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .panel h3 { font-size: 1.1rem; margin-bottom: 10px; color: #c8ddf8; display: flex; align-items: center; gap: 6px; }
+        .panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
         .panel h3 .icon { font-size: 1.2rem; }
 
         .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
-        .input-row input { padding: 9px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #0d1520; color: var(--text); font-size: 0.9rem; outline: none; transition: var(--transition); flex: 1; min-width: 120px; }
+        .input-row input {
+            padding: 9px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition);
+            flex: 1;
+            min-width: 120px;
+        }
         .input-row input:focus { border-color: var(--accent); box-shadow: 0 0 8px #3a7bd533; }
         .input-row input.dur-input { flex: 0 0 90px; min-width: 70px; }
 
         .checkin-list { list-style: none; padding-right: 4px; }
-        .checkin-list li { padding: 7px 0; border-bottom: 1px solid #1a2a3a; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-        .checkin-list .task-name { color: #c8ddf8; flex: 1; }
+        .checkin-list li {
+            padding: 7px 0;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkin-list .task-name { color: var(--text); flex: 1; }
         .checkin-list .task-dur { color: var(--accent); font-weight: 600; white-space: nowrap; }
         .checkin-list .task-time { color: var(--text2); font-size: 0.75rem; white-space: nowrap; }
 
         .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding-right: 4px; }
-        .card-item { background: #0d1520; border: 1px solid #2a3a50; border-radius: var(--radius-sm); padding: 12px; cursor: default; transition: var(--transition); position: relative; }
+        .card-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: default;
+            transition: var(--transition);
+            position: relative;
+        }
         .card-item:hover { border-color: #4a6a90; box-shadow: 0 2px 12px #00000044; }
         .card-item.rare { border-color: #3a6a90; box-shadow: 0 0 10px #3a7bd522; }
         .card-item.legend { border-color: #8a6a20; box-shadow: 0 0 16px #e0b04033; background: #141008; }
@@ -112,13 +204,39 @@
         .badge-rare { background: #1a3a50; color: #7eb8da; }
         .badge-legend { background: #3a2a10; color: #f0c040; }
 
-        .adventure-event { background: #0d1520; border-left: 3px solid var(--accent); padding: 14px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 10px 0; line-height: 1.6; font-size: 0.9rem; color: #c8d8e8; }
+        .adventure-event {
+            background: var(--glass-bg);
+            border-left: 3px solid var(--accent);
+            padding: 14px 16px;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin: 10px 0;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
         .adventure-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--text2); }
 
         .backpack-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
         .backpack-list li { background: #1a2535; padding: 4px 10px; border-radius: 14px; font-size: 0.78rem; color: #b0c8d8; border: 1px solid #2a3a50; }
 
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; background: #1e3050; color: #fff; padding: 12px 24px; border-radius: 24px; font-weight: 600; font-size: 0.9rem; box-shadow: 0 8px 24px #00000066; animation: toastIn 0.35s ease, toastOut 0.4s ease 2.5s forwards; pointer-events: none; border: 1px solid #3a6088; }
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(30, 40, 50, 0.85);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            animation: toastIn 0.35s ease, toastOut 0.4s ease 2.5s forwards;
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        }
         @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
         @keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
 
@@ -129,7 +247,16 @@
         .tomato-display { font-size: 2.4rem; font-weight: 700; text-align: center; color: #f0c040; margin: 8px 0; font-variant-numeric: tabular-nums; }
         .tomato-preset { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
         .tomato-preset .btn { font-size: 0.75rem; padding: 4px 10px; }
-        .tomato-custom { padding: 4px 6px; border-radius: 16px; border: 1px solid var(--border); background: #0d1520; color: var(--text); font-size: 0.75rem; width: 70px; text-align: center; }
+        .tomato-custom {
+            padding: 4px 6px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text);
+            font-size: 0.75rem;
+            width: 70px;
+            text-align: center;
+        }
 
         @media (max-width: 768px) {
             .main-layout { flex-direction: column; gap: 12px; }
@@ -142,15 +269,29 @@
             .panel-area { height: calc(100vh - 300px); min-height: 400px; width: 100%; }
             .panel { padding: 14px 12px; }
             .input-row { flex-direction: column; gap: 8px; }
-            .input-row input { width: 100%; }
             .input-row input.dur-input { flex: none; width: 100%; }
             .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
             .tomato-display { font-size: 2.2rem; margin: 10px 0; }
             .tomato-preset { justify-content: center; }
-            .tomato-preset .btn { flex: 1 0 auto; padding: 8px 4px; font-size: 0.75rem; }
+            .tomato-preset .btn {
+                font-size: 0.75rem;
+                padding: 4px 10px;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                color: var(--text);
+            }
             .tomato-section > div:last-child { flex-wrap: wrap; gap: 8px; }
             .tomato-section > div:last-child .btn,
-            .tomato-section > div:last-child input { flex: 1 0 auto; }
+            .tomato-section > div:last-child input {
+                flex: 1 0 auto;
+                width: 120px;
+                padding: 4px 8px;
+                border-radius: 16px;
+                border: 1px solid var(--glass-border);
+                background: var(--glass-bg);
+                color: var(--text);
+                font-size: 0.78rem;
+            }
             #tomatoTaskInput { width: 100% !important; }
             .adventure-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
         }
@@ -330,12 +471,89 @@
             border-bottom: 1px solid #1a2a3a;
             font-size: 0.68rem;
         }
+                /* ========== 主题配色定义 ========== */
+        body {
+            transition: background-color 0.8s ease, background-image 0.8s ease;
+        }
+
+        /* 主题配色 */
+        body.theme-classic {
+            --bg-color: #0a0e17;
+            --bg-gradient: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
+            --text: #d0d8e8;
+            --text2: #94a3b8;
+            --accent: #5eb0e5;
+            --gold: #f0c060;
+        }
+        body.theme-frost {
+            --bg-color: #c8dce8;
+            --bg-gradient: linear-gradient(180deg, #e8f0f8 0%, #c0d4e0 60%, #a0b8c8 100%);
+            --text: #2a3a4a;
+            --text2: #5a6a7a;
+            --accent: #4a90c0;
+            --gold: #c08030;
+        }
+        body.theme-ember {
+            --bg-color: #1e1814;
+            --bg-gradient: radial-gradient(ellipse at 50% 100%, #4a3020 0%, #2a1a10 30%, #1e1814 70%);
+            --text: #d0c8b8;
+            --text2: #a09080;
+            --accent: #e89050;
+            --gold: #e0a040;
+        }
+        body.theme-glacier {
+            --bg-color: #0a1620;
+            --bg-gradient: linear-gradient(180deg, #1a3a4a 0%, #0a2a3a 40%, #0a1620 80%);
+            --text: #c0d8e8;
+            --text2: #80a0b8;
+            --accent: #60c0e0;
+            --gold: #c0d060;
+        }
+        body.theme-twilight {
+            --bg-color: #120a18;
+            --bg-gradient: radial-gradient(ellipse at 30% 0%, #2a1a4a 0%, #1a1030 40%, #120a18 70%);
+            --text: #d0c8e8;
+            --text2: #a090c0;
+            --accent: #a080e0;
+    --gold: #d0a0f0;
+}
+        /* 右上角主题切换按钮 */
+        .theme-toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 1.4rem;
+            cursor: pointer;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px var(--accent);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            line-height: 1;
+        }
+        .theme-toggle-btn:hover {
+            transform: scale(1.15) rotate(15deg);
+            box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+        }
+        .theme-toggle-btn:active {
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body>
 <div class="snowfall" id="snowfall"></div>
 <div id="toastContainer"></div>
-
+<!-- 主题切换按钮 -->
+<button id="themeToggleBtn" class="theme-toggle-btn" title="切换背景主题">
+    🎨
+</button>
 <div class="app-container">
     <div class="header">
         <h1>❄️ 卡卡查克 · 雪原冒险</h1>
@@ -662,117 +880,148 @@
             isDirty = true;
         }
         // 显示梦境覆盖层
-    function showDream() {
-        if (dreamTriggered) return;
-        dreamTriggered = true;
-        const overlay = document.getElementById('dreamOverlay');
-        if (!overlay) return;
-        overlay.style.display = 'flex';
-        overlay.classList.add('active');
-        dreamClickCount = 0;
-        document.getElementById('dreamBtnWake').style.display = 'none'; // 隐藏醒来按钮
-        // 启动花瓣
-        startDreamPetals();
-        // 绑定按钮事件（使用全局函数，已在 window 上暴露）
-    }
-
-    // 隐藏梦境覆盖层（醒来）
-    function hideDream() {
-        const overlay = document.getElementById('dreamOverlay');
-        if (!overlay) return;
-        // 停止花瓣
-        stopDreamPetals();
-        // 渐暗效果
-        document.getElementById('dreamDarkOverlay').classList.add('active');
-        overlay.classList.add('fading');
-        // 恢复旅行者状态
-        travelerState.health = clamp(travelerState.health + 25, 0, 100);
-        travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
-        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-        travelerState.log.push(`${timeStr} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
-        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-        forceSaveAll();
-        // 延迟移除覆盖层，配合动画
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            overlay.classList.remove('fading');
-            document.getElementById('dreamDarkOverlay').classList.remove('active');
-            dreamTriggered = false; // 允许再次触发（如果你希望再次濒死时弹出）
-        }, 2500);
-    }
-
-    // 处理“继续沉睡”点击
-    function handleDreamSleep() {
-        dreamClickCount++;
-        // 随机呼喊
-        const shouts = [
-            '队长！！',
-            '小周！别睡！',
-            '你答应过要回来的……',
-            '不要一个人……',
-            '快醒醒！',
-            '我们找到补给箱了！',
-            '极光下面等你！',
-            '暴风雪要来了……',
-            '冰层要裂了！！',
-            '起来啊……求你了',
-        ];
-        const layer = document.getElementById('dreamShoutLayer');
-        let text;
-        if (dreamClickCount >= 20) {
-            text = '这是哪里？';
-        } else {
-            text = shouts[Math.floor(Math.random() * shouts.length)];
+        function showDream() {
+            if (dreamTriggered) return;
+            dreamTriggered = true;
+            const overlay = document.getElementById('dreamOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            overlay.classList.add('active');
+            dreamClickCount = 0;
+            document.getElementById('dreamBtnWake').style.display = 'none'; // 隐藏醒来按钮
+            // 启动花瓣
+            startDreamPetals();
+            // 绑定按钮事件（使用全局函数，已在 window 上暴露）
         }
-        const el = document.createElement('div');
-        el.className = 'shout-text';
-        el.textContent = text;
-        el.style.top = (15 + Math.random() * 50) + '%';
-        el.style.left = (20 + Math.random() * 60) + '%';
-        layer.appendChild(el);
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 2400);
 
-        if (dreamClickCount >= DREAM_MAX_CLICKS) {
-            const wakeBtn = document.getElementById('dreamBtnWake');
-            if (wakeBtn) wakeBtn.style.display = 'inline-block';
+        // 隐藏梦境覆盖层（醒来）
+        function hideDream() {
+            const overlay = document.getElementById('dreamOverlay');
+            if (!overlay) return;
+            // 停止花瓣
+            stopDreamPetals();
+            // 渐暗效果
+            document.getElementById('dreamDarkOverlay').classList.add('active');
+            overlay.classList.add('fading');
+            // 恢复旅行者状态
+            travelerState.health = clamp(travelerState.health + 25, 0, 100);
+            travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
+            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+            travelerState.log.push(`${timeStr} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
+            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            forceSaveAll();
+            // 延迟移除覆盖层，配合动画
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                overlay.classList.remove('fading');
+                document.getElementById('dreamDarkOverlay').classList.remove('active');
+                dreamTriggered = false; // 允许再次触发（如果你希望再次濒死时弹出）
+            }, 2500);
         }
+
+        // 处理“继续沉睡”点击
+        function handleDreamSleep() {
+            dreamClickCount++;
+            // 随机呼喊
+            const shouts = [
+                '队长！！',
+                '小周！别睡！',
+                '你答应过要回来的……',
+                '不要一个人……',
+                '快醒醒！',
+                '我们找到补给箱了！',
+                '极光下面等你！',
+                '暴风雪要来了……',
+                '冰层要裂了！！',
+                '起来啊……求你了',
+            ];
+            const layer = document.getElementById('dreamShoutLayer');
+            let text;
+            if (dreamClickCount >= 20) {
+                text = '这是哪里？';
+            } else {
+                text = shouts[Math.floor(Math.random() * shouts.length)];
+            }
+            const el = document.createElement('div');
+            el.className = 'shout-text';
+            el.textContent = text;
+            el.style.top = (15 + Math.random() * 50) + '%';
+            el.style.left = (20 + Math.random() * 60) + '%';
+            layer.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 2400);
+
+            if (dreamClickCount >= DREAM_MAX_CLICKS) {
+                const wakeBtn = document.getElementById('dreamBtnWake');
+                if (wakeBtn) wakeBtn.style.display = 'inline-block';
+            }
+        }
+
+        function startDreamPetals() {
+            const container = document.getElementById('dreamPetals');
+            if (!container) return;
+            const petalElements = [
+                '🌸','💮','🏵️',
+                '🍀','🌿','🍃','☘️',
+                '🍂','🍁',
+                '🪷','🌸','🍀','🌿'
+            ];
+        function createPetal() {
+            const petal = document.createElement('span');
+            petal.className = 'petal';
+            petal.textContent = petalElements[Math.floor(Math.random() * petalElements.length)];
+            petal.style.left = Math.random() * 100 + '%';
+            petal.style.fontSize = (0.7 + Math.random() * 1.6) + 'rem';
+            petal.style.animationDuration = (7 + Math.random() * 16) + 's';
+            petal.style.animationDelay = Math.random() * 4 + 's';
+            container.appendChild(petal);
+            const totalDuration = (parseFloat(petal.style.animationDuration) + parseFloat(petal.style.animationDelay)) * 1000 + 2000;
+            setTimeout(() => { if (petal.parentNode) petal.remove(); }, totalDuration);
+        }
+        for (let i = 0; i < 35; i++) {
+            setTimeout(createPetal, i * 180);
+        }
+        dreamPetalInterval = setInterval(createPetal, 1400);
     }
 
-    function startDreamPetals() {
-        const container = document.getElementById('dreamPetals');
-        if (!container) return;
-        const petalElements = [
-            '🌸','💮','🏵️',
-            '🍀','🌿','🍃','☘️',
-            '🍂','🍁',
-            '🪷','🌸','🍀','🌿'
-        ];
-    function createPetal() {
-        const petal = document.createElement('span');
-        petal.className = 'petal';
-        petal.textContent = petalElements[Math.floor(Math.random() * petalElements.length)];
-        petal.style.left = Math.random() * 100 + '%';
-        petal.style.fontSize = (0.7 + Math.random() * 1.6) + 'rem';
-        petal.style.animationDuration = (7 + Math.random() * 16) + 's';
-        petal.style.animationDelay = Math.random() * 4 + 's';
-        container.appendChild(petal);
-        const totalDuration = (parseFloat(petal.style.animationDuration) + parseFloat(petal.style.animationDelay)) * 1000 + 2000;
-        setTimeout(() => { if (petal.parentNode) petal.remove(); }, totalDuration);
-    }
-    for (let i = 0; i < 35; i++) {
-        setTimeout(createPetal, i * 180);
-    }
-    dreamPetalInterval = setInterval(createPetal, 1400);
-}
+        function stopDreamPetals() {
+            if (dreamPetalInterval) {
+                clearInterval(dreamPetalInterval);
+                dreamPetalInterval = null;
+            }
+            const container = document.getElementById('dreamPetals');
+            if (container) container.innerHTML = ''; // 清空花瓣
+        }
+                // ==================== 背景主题切换 ====================
+            const THEMES = ['classic', 'frost', 'ember', 'glacier', 'twilight'];
+            const THEME_NAMES = {
+                classic: '经典极光蓝',
+                frost: '霜白晨曦',
+                ember: '余烬暖橙',
+                glacier: '冰蓝冰川',
+                twilight: '暮紫极光'
+            };
 
-function stopDreamPetals() {
-    if (dreamPetalInterval) {
-        clearInterval(dreamPetalInterval);
-        dreamPetalInterval = null;
-    }
-    const container = document.getElementById('dreamPetals');
-    if (container) container.innerHTML = ''; // 清空花瓣
-}
+            // 从 localStorage 读取或使用默认主题
+            let currentTheme = localStorage.getItem('kaka_theme') || 'classic';
+            applyTheme(currentTheme);
+
+        function applyTheme(theme) {
+            // 移除所有主题类
+            THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+            // 添加当前主题类
+            document.body.classList.add('theme-' + theme);
+            currentTheme = theme;
+            // 保存到 localStorage
+            localStorage.setItem('kaka_theme', theme);
+        }
+
+        function cycleTheme() {
+            const currentIndex = THEMES.indexOf(currentTheme);
+            const nextIndex = (currentIndex + 1) % THEMES.length;
+            const nextTheme = THEMES[nextIndex];
+            applyTheme(nextTheme);
+            showToast('🎨 主题已切换至：' + THEME_NAMES[nextTheme], 2000);
+        }
 
         function forceSaveAll() {
             saveJSON(LS_KEYS.userData, userData);
@@ -1268,7 +1517,7 @@ function stopDreamPetals() {
     
 
         // ==================== 番茄钟模块 ====================
-        let lastTomatoDrops = [];
+
         let currentTomatoDrops = []; // 存储本次掉落的物品 { name, rarity }
         let tomatoState = {
             totalSeconds: 25 * 60,
@@ -1394,7 +1643,7 @@ function stopDreamPetals() {
                 realElapsed = tomatoState.elapsedFocusSeconds;
             }
 
-            console.log('停止番茄钟，专注秒数:', realElapsed.toFixed(1));
+            
 
             if (record && realElapsed >= 60) {
                 const minutes = Math.floor(realElapsed / 60);
@@ -1498,46 +1747,6 @@ function stopDreamPetals() {
             updateTomatoUI();
         }
 
-        function tickTomato() {
-            if (tomatoState.status !== 'running') return;
-            const now = Date.now();
-            const totalElapsed = (now - tomatoState.startTime) / 1000;
-
-            if (tomatoState.mode === 'stopwatch') {
-                tomatoState.elapsedFocusSeconds = totalElapsed;
-            } else {
-                const remaining = tomatoState.totalSeconds - totalElapsed;
-                tomatoState.elapsedFocusSeconds = totalElapsed;
-                if (remaining <= 0) {
-                    tomatoState.remainingSeconds = 0;
-                    stopTomato(true);
-                    return;
-                }
-                tomatoState.remainingSeconds = remaining;
-            }
-            updateTomatoUI();
-        }
-
-        function setTomatoPreset(minutes) {
-            if (tomatoState.status !== 'idle') return;
-            tomatoState.totalSeconds = minutes * 60;
-            tomatoState.remainingSeconds = minutes * 60;
-            tomatoState.mode = 'countdown';
-            updateTomatoUI();
-        }
-        function toggleTomatoMode() {
-            if (tomatoState.status !== 'idle') return;
-            tomatoState.mode = tomatoState.mode === 'countdown' ? 'stopwatch' : 'countdown';
-            if (tomatoState.mode === 'stopwatch') {
-                tomatoState.elapsedFocusSeconds = 0;
-                tomatoState.remainingSeconds = 0;
-            } else {
-                tomatoState.remainingSeconds = tomatoState.totalSeconds;
-                tomatoState.elapsedFocusSeconds = 0;
-            }
-            updateTomatoUI();
-        }
-
         // ==================== 赠送 ====================
         function giveToTraveler(name) {
             if (travelerState.backpack.length >= 10) {
@@ -1601,7 +1810,6 @@ function stopDreamPetals() {
                     adventureState = data.adventureState;
                     forceSaveAll();
                     updateTravelerBar();
-                    clearTomatoDrop();
                     const activeTab = document.querySelector('.tab-btn.active');
                     if (activeTab) renderPanel(activeTab.dataset.tab);
                     showToast('📥 存档导入成功！');
@@ -1695,7 +1903,7 @@ function stopDreamPetals() {
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
                     <button class="btn btn-outline btn-sm" id="btnClearAll">🗑 清除今天全部</button>
                 </div>
-                <p style="font-size:0.82rem;color:#94a3b8;margin:4px 0;">
+                <p style="font-size:0.82rem;color:var(--text2);margin:4px 0;">
                     📅 今日：<b>${todayCheckins.length}</b> 条打卡 | ⏱ 总专注：<b>${stats.totalDurationToday}</b> 分钟 | 🔥 连续：<b>${stats.streak}</b> 天
                 </p>
 
@@ -1707,16 +1915,16 @@ function stopDreamPetals() {
                 <!-- 抽卡按钮 -->
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
                     <button class="btn btn-gold btn-sm" id="btnDrawCard">🎴 抽卡（每日）</button>
-                    <span style="font-size:0.75rem;color:#94a3b8;align-self:center;">
+                    <span style="font-size:0.75rem;color:var(--text2);align-self:center;">
                         ${userData.lastDailyDraw === today ? '✅ 今日已抽卡' : '⬅ 打卡后可抽'}
                     </span>
                 </div>
 
-                <hr style="border-color:#1e3a5f;margin:0 0 10px 0;">
+                <hr style="border-color:var(--glass-border);margin:0 0 10px 0;">
 
                 <!-- 番茄钟（固定在底部） -->
                 <div class="tomato-section" style="flex-shrink:0;">
-                    <h4 style="margin:0 0 4px;color:#c8ddf8;">🍅 番茄钟</h4>
+                    <h4 style="margin:0 0 4px;color:var(--text);">🍅 番茄钟</h4>
                     <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds, tomatoState.mode)}</div>
                     <div class="tomato-preset">
                         <button class="btn btn-outline btn-sm preset-btn" data-min="15">15分</button>
@@ -1729,7 +1937,7 @@ function stopDreamPetals() {
                         <button class="btn btn-primary btn-sm" id="btnTomatoStart">▶ 开始</button>
                         <button class="btn btn-outline btn-sm" id="btnTomatoStop">⏹ 停止</button>
                         <button class="btn btn-outline btn-sm" id="btnTomatoMode">⏱ 正计时</button>
-                        <input type="text" id="tomatoTaskInput" placeholder="任务名" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid #1e3a5f;background:#0d1520;color:#d0d8e8;font-size:0.78rem;">
+                        <input type="text" id="tomatoTaskInput" placeholder="任务名" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text);font-size:0.78rem;">
                     </div>
                     ${dropLogHtml}
                     </div>
@@ -1762,8 +1970,8 @@ function stopDreamPetals() {
 
             let logHtml = '';
             if (t.log && t.log.length) {
-                logHtml = '<div style="margin-top:10px;"><span style="font-size:0.8rem;color:#94a3b8;">📜 旅行者日志：</span><ul class="checkin-list">';
-                for (const entry of t.log.slice(-5)) logHtml += `<li style="font-size:0.75rem;color:#b0c8d8;">${escHtml(entry)}</li>`;
+                logHtml = '<div style="margin-top:10px;"><span style="font-size:0.8rem;color:var(--text2);">📜 旅行者日志：</span><ul class="checkin-list">';
+                for (const entry of t.log.slice(-5)) logHtml += `<li style="font-size:0.75rem;color:var(--text2);">${escHtml(entry)}</li>`;
                 logHtml += '</ul></div>';
             }
 
@@ -1904,7 +2112,7 @@ function stopDreamPetals() {
                         input.style.padding = '2px 6px';
                         input.style.borderRadius = '4px';
                         input.style.border = '1px solid #5eb0e5';
-                        input.style.background = '#0d1520';
+                        input.style.background = 'var(--glass-bg)';
                         input.style.color = '#d0d8e8';
                         input.style.fontSize = '0.85rem';
 
@@ -2104,6 +2312,11 @@ function stopDreamPetals() {
             forceSaveAll();
             initSnowfall(adventureState.weather); // 改为带参数
             initTabs();
+                // 主题切换按钮
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', cycleTheme);
+            }
                 // 梦境按钮绑定
             const sleepBtn = document.getElementById('dreamBtnSleep');
             if (sleepBtn) sleepBtn.addEventListener('click', handleDreamSleep);
@@ -2115,7 +2328,6 @@ function stopDreamPetals() {
             startTickers();
             renderPanel('checkin');
             updateTravelerBar();
-            console.log('❄️ 卡卡查克·雪原冒险 已就绪');
         }
 
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
