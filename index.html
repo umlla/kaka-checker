@@ -217,7 +217,14 @@
         .adventure-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--text2); }
 
         .backpack-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
-        .backpack-list li { background: #1a2535; padding: 4px 10px; border-radius: 14px; font-size: 0.78rem; color: #b0c8d8; border: 1px solid #2a3a50; }
+        .backpack-list li {
+            background: var(--glass-bg);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            color: var(--text2);
+            border: 1px solid var(--glass-border);
+        }
 
         .toast {
             position: fixed;
@@ -1984,12 +1991,12 @@
                     <span>⏳ 刷新倒计时：约 ${remaining} 分钟</span>
                 </div>
                 <div class="adventure-event">🚶 ${escHtml(report.event)}</div>
-                <div style="margin-top:8px;font-size:0.85rem;color:#b0c8d8;">
-                    🌡️温度:<b>${Math.round(t.temperature)}°C</b> | ❤️健康:<b>${Math.round(t.health)}</b> | 🍞饱腹:<b>${Math.round(t.hunger)}</b> | 😊心情:<b>${Math.round(t.mood)}</b>
-                    ${statusText ? '<br>' + statusText : ''}
+                <div style="margin-top:8px;font-size:0.85rem;color:var(--text);">
+                    🌡️ 温度:<b>${Math.round(t.temperature)}°C</b> | ❤️ 健康:<b>${Math.round(t.health)}</b> | 🍞 饱腹:<b>${Math.round(t.hunger)}</b> | 😊 心情:<b>${Math.round(t.mood)}</b>
+                    ${statusText ? '<br><span style="color:var(--text2);">' + statusText + '</span>' : ''}
                 </div>
                 <div style="margin-top:6px;">
-                    <span style="font-size:0.8rem;color:#94a3b8;">🎒 旅行者背包（${t.backpack.length}/10）：</span>${bpHtml}
+                    <span style="font-size:0.8rem;color:var(--text2);">🎒 旅行者背包（${t.backpack.length}/10）：</span>${bpHtml}
                 </div>
                 ${logHtml}
             </div>`;
