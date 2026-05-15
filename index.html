@@ -415,11 +415,13 @@
             cursor: pointer;
             transition: opacity 0.3s, background 0.3s;
             opacity: 0;                   /* 初始透明，占位不跳动 */
+            pointer-events: none; 
             white-space: nowrap;
         }
 
         .dream-card .btn-wake.show {      /* 新增：出现时 */
             opacity: 1;
+            pointer-events: auto; 
         }
 
         .dream-card .btn-wake:hover {
@@ -492,14 +494,7 @@
             --accent: #5eb0e5;
             --gold: #f0c060;
         }
-        body.theme-frost {
-            --bg-color: #c8dce8;
-            --bg-gradient: linear-gradient(180deg, #e8f0f8 0%, #c0d4e0 60%, #a0b8c8 100%);
-            --text: #2a3a4a;
-            --text2: #5a6a7a;
-            --accent: #4a90c0;
-            --gold: #c08030;
-        }
+        
         body.theme-ember {
             --bg-color: #1e1814;
             --bg-gradient: radial-gradient(ellipse at 50% 100%, #4a3020 0%, #2a1a10 30%, #1e1814 70%);
@@ -508,14 +503,6 @@
             --accent: #e89050;
             --gold: #e0a040;
         }
-        body.theme-glacier {
-            --bg-color: #0a1620;
-            --bg-gradient: linear-gradient(180deg, #1a3a4a 0%, #0a2a3a 40%, #0a1620 80%);
-            --text: #c0d8e8;
-            --text2: #80a0b8;
-            --accent: #60c0e0;
-            --gold: #c0d060;
-        }
         body.theme-twilight {
             --bg-color: #120a18;
             --bg-gradient: radial-gradient(ellipse at 30% 0%, #2a1a4a 0%, #1a1030 40%, #120a18 70%);
@@ -523,7 +510,26 @@
             --text2: #a090c0;
             --accent: #a080e0;
     --gold: #d0a0f0;
-}
+        }
+        /* 血月残象 - 红色主题 */
+        body.theme-bloodmoon {
+            --bg-color: #1a0a0a;
+            --bg-gradient: radial-gradient(circle at 50% 60%, #4a1010 0%, #1a0a0a 70%);
+            --text: #e0c0c0;
+            --text2: #a08080;
+            --accent: #d04040;
+            --gold: #e06050;
+        }
+
+        /* 梦境回响 - 绿色主题 */
+        body.theme-dreamecho {
+            --bg-color: #0d1e12;
+            --bg-gradient: radial-gradient(ellipse at 50% 30%, #2b5e38 0%, #163a20 40%, #0d1e12 70%);
+            --text: #d4eed8;
+            --text2: #8ab894;
+            --accent: #66cc7a;      /* 鲜嫩草绿 */
+            --gold: #a0e6a0;        /* 嫩芽黄绿 */
+        }
         /* 右上角主题切换按钮 */
         .theme-toggle-btn {
             position: fixed;
@@ -541,9 +547,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 12px var(--accent);
-            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+            transition: transform 0.3s ease, background 0.3s ease;
             line-height: 1;
+        }
+        .theme-toggle-btn:hover {
+            transform: scale(1.15) rotate(15deg);
         }
         .theme-toggle-btn:hover {
             transform: scale(1.15) rotate(15deg);
@@ -895,7 +903,10 @@
             overlay.style.display = 'flex';
             overlay.classList.add('active');
             dreamClickCount = 0;
-            document.getElementById('dreamBtnWake').style.display = 'none'; // 隐藏醒来按钮
+            const wakeBtn = document.getElementById('dreamBtnWake');
+            if (wakeBtn) {
+                wakeBtn.classList.remove('show');   // 移除显示类，初始状态隐藏
+            }
             // 启动花瓣
             startDreamPetals();
             // 绑定按钮事件（使用全局函数，已在 window 上暴露）
@@ -916,6 +927,8 @@
             const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
             travelerState.log.push(`${timeStr} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
             if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            // 解锁梦境回响主题
+            unlockTheme('dreamecho');
             forceSaveAll();
             // 延迟移除覆盖层，配合动画
             setTimeout(() => {
@@ -959,7 +972,7 @@
 
             if (dreamClickCount >= DREAM_MAX_CLICKS) {
                 const wakeBtn = document.getElementById('dreamBtnWake');
-                if (wakeBtn) wakeBtn.style.display = 'inline-block';
+                if (wakeBtn) wakeBtn.classList.add('show');
             }
         }
 
@@ -998,36 +1011,52 @@
             const container = document.getElementById('dreamPetals');
             if (container) container.innerHTML = ''; // 清空花瓣
         }
-                // ==================== 背景主题切换 ====================
-            const THEMES = ['classic', 'frost', 'ember', 'glacier', 'twilight'];
-            const THEME_NAMES = {
-                classic: '经典极光蓝',
-                frost: '霜白晨曦',
-                ember: '余烬暖橙',
-                glacier: '冰蓝冰川',
-                twilight: '暮紫极光'
-            };
+            // ==================== 背景主题切换（支持解锁） ====================
+        const ALL_THEMES = ['classic', 'ember', 'twilight', 'bloodmoon', 'dreamecho'];
+        const THEME_NAMES = {
+            classic: '经典极光蓝',
+            ember: '余烬暖橙',
+            twilight: '暮紫极光',
+            bloodmoon: '血月残象',
+            dreamecho: '梦境回响'
+        };
 
-            // 从 localStorage 读取或使用默认主题
-            let currentTheme = localStorage.getItem('kaka_theme') || 'classic';
-            applyTheme(currentTheme);
+        // 从 localStorage 读取已解锁主题列表，默认解锁前三个
+        let unlockedThemes = JSON.parse(localStorage.getItem('kaka_unlocked_themes')) || ['classic', 'ember', 'twilight'];
+        let currentTheme = localStorage.getItem('kaka_theme') || 'classic';
+
+        function saveUnlockedThemes() {
+            localStorage.setItem('kaka_unlocked_themes', JSON.stringify(unlockedThemes));
+        }
 
         function applyTheme(theme) {
+            // 如果尝试应用未解锁的主题，忽略
+            if (!unlockedThemes.includes(theme)) return;
+            
             // 移除所有主题类
-            THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+            ALL_THEMES.forEach(t => document.body.classList.remove('theme-' + t));
             // 添加当前主题类
             document.body.classList.add('theme-' + theme);
             currentTheme = theme;
-            // 保存到 localStorage
             localStorage.setItem('kaka_theme', theme);
         }
 
         function cycleTheme() {
-            const currentIndex = THEMES.indexOf(currentTheme);
-            const nextIndex = (currentIndex + 1) % THEMES.length;
-            const nextTheme = THEMES[nextIndex];
+            // 只在已解锁的主题之间循环
+            const currentIndex = unlockedThemes.indexOf(currentTheme);
+            const nextIndex = (currentIndex + 1) % unlockedThemes.length;
+            const nextTheme = unlockedThemes[nextIndex];
             applyTheme(nextTheme);
             showToast('🎨 主题已切换至：' + THEME_NAMES[nextTheme], 2000);
+        }
+
+        // 解锁新主题
+        function unlockTheme(theme) {
+            if (!unlockedThemes.includes(theme)) {
+                unlockedThemes.push(theme);
+                saveUnlockedThemes();
+                showToast('🔓 新主题已解锁：' + THEME_NAMES[theme], 3000);
+            }
         }
 
         function forceSaveAll() {
@@ -1299,6 +1328,10 @@
                 if (travelerState.hunger <= 8) candidates.push('hunger');
                 if (travelerState.mood <= 8) candidates.push('mood');
                 if (travelerState.health <= 18) candidates.push('health');
+                // 解锁血月残象主题
+                if (travelerState.health <= 10 && !unlockedThemes.includes('bloodmoon')) {
+                    unlockTheme('bloodmoon');
+                }
                 if (travelerState.temperature <= -28) candidates.push('temp');
                 const type = candidates[Math.floor(Math.random() * candidates.length)];
                 eventObj = EXTREME_EVENTS[type] ? randChoice(EXTREME_EVENTS[type]) : randChoice(EVENT_POOL);
