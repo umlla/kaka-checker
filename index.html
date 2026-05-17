@@ -683,19 +683,7 @@
                 ["雪地帐篷","用特殊防水布料制成的帐篷，能抵御暴风雪的侵袭。耐久：5","你试着搭起帐篷，结构稳固，布料厚实，感觉在里面过夜应该没问题。","旅行者在暴风雪来临前迅速搭好帐篷，躲在里面听着外面的风呼啸，身体慢慢恢复了温暖。","warm",{"durability":5, "onUse":{"temp":4, "health":2}}],
             ],
         };
-        // 旅行者自己找到的劣质求生物品
-        const SURVIVAL_SCRAPS = [
-            ["树皮干", "从冻僵的桦树上剥下的内层树皮，嚼起来像木屑，勉强能吞下去。", "你咬了一小口，干涩的纤维塞满牙缝，几乎感觉不到任何营养，但至少胃里有了点东西。", "旅行者皱着眉头啃着树皮，每咽一口都要喝口雪水冲冲嗓子。", "food", {"hunger": 3}],
-            ["干苔藓", "从岩石上刮下来的灰绿色苔藓，晒干后像一团乱麻，烧起来只有微弱的青烟。", "你捏了一小撮放进嘴里，一股土腥味直冲天灵盖，嚼了半天才咽下去，肚子里那团火勉强没有熄灭。", "旅行者把苔藓揉成小球塞进嘴里，表情扭曲地咽了下去，然后赶紧灌了一大口冰水。", "food", {"hunger": 2}],
-            ["冻草根", "从冻土里硬拔出来的草根，硬得像铁丝，得用体温捂软了才能咬得动。", "你捂了半天才把草根焐热，咬下去嘎嘣脆，带着一丝微甜的汁水，这是这几天最像样的一顿了。", "旅行者像兔子一样喀嚓喀嚓地嚼着草根，吃完后还仔细舔了舔手指上沾的泥。", "food", {"hunger": 4}],
-            ["破麻布片", "不知从哪件废弃衣服上扯下的麻布，裹在身上能挡一点风，但到处是破洞。", "你把布片缠在手臂上，风从破洞里钻进来凉飕飕的，但好歹比光着胳膊强一丁点。", "旅行者用麻布裹住了冻红的双手，两只手像戴了一双乞丐手套，不过确实暖和了一丝丝。", "warm", {"temp": 2}],
-            ["烂皮绳", "一截断掉的驯鹿皮绳，已经磨得起了毛边，勉强可以捆扎东西或当临时止血带。", "你试着扯了扯，还没怎么用力就吱吱作响，但用它扎紧伤口应该能撑一阵子。", "旅行者用牙和右手配合，把皮绳死死扎在上臂，伤口的血总算是止住了。", "medical", {"health": 3}],
-            ["雪浸火柴", "一盒在雪里泡过的火柴，大部分已经划不着了，但仔细拨拉总有那么一两根还能用。", "你小心翼翼地拨开火柴头，试了五六根之后终于擦出一朵火苗，赶紧用手护着，生怕被风吹灭。", "旅行者跪在雪地里划火柴，连续失败后终于燃起一朵微弱的火焰，他赶紧用身体挡住风。", "warm", {"temp": 3}],
-            ["干羽梗", "不知名大鸟脱落的羽毛梗，中间是空心的，可以吸一点融化的雪水，权当吸管。", "你对着光看了看羽梗，管子里还残留着一丁点冻住的露水，你用力吸了一口，冰得舌头疼。", "旅行者把羽梗插进雪里，等化出几滴水就连忙凑上去吸，像一只啄食的雪鹀。", "food", {"hunger": 1}],
-            ["碎骨针", "不知什么动物的碎骨片，边缘磨得还算锋利，可以当简易的针或鱼钩。", "你小心地拿起碎骨片，边缘还算锋利，用来挑水泡或缝补衣服应该够用。", "旅行者找了根细藤系在骨针上，做成一个歪歪扭扭的鱼钩，虽然成功率不高但总比没有强。", "support", {"mood": 2}],
-            ["灰烬盐", "从篝火灰烬里筛出的粗盐，混着草木灰，味道又苦又涩，但能补充一点电解质。", "你用手指沾了一小撮，舔了一口，苦得皱起眉头，但身体确实需要这点盐分。", "旅行者用雪水把灰烬盐化开，捏着鼻子灌了下去，味道难以形容，但抽筋的小腿总算好了一些。", "food", {"health": 1, "mood": -2}],
-            ["旧皮绑腿", "一条被遗弃的旧皮绑腿，上面的扣子已经生锈，但还能紧紧裹住小腿防止冻伤。", "你用力拉紧绑腿，皮料发出一阵吱嘎声，裹上后小腿终于不再那么僵硬了。", "旅行者蹲下来仔细绑好皮绑腿，站起来蹬了蹬腿，感觉像是捡回了一双新脚。", "warm", {"temp": 2, "health": 1}]
-        ];
+        
         const THANKS_POOL = {
             food: [
                 "“太及时了！我肚子正咕咕叫呢。”旅行者眼睛一亮。",
@@ -1144,74 +1132,12 @@
             }
 
             // ---------- 离线自我维持 ----------
-            if (hours > 0.1) { // 离线超过6分钟
-                // 第一步：使用背包物品（每小时2次）
+                        // ---------- 离线使用背包物品 ----------
+            if (hours > 0.1) {
                 const usageCycles = Math.floor(hours * 2);
                 for (let i = 0; i < usageCycles; i++) {
                     autoUseBackpackItem();
-                    // 若背包空了就停止，不浪费循环
                     if (travelerState.backpack.length === 0) break;
-                }
-
-                // 第二步：挣扎求生（生存危机时才拼命找劣质品）
-                const isStarving = travelerState.hunger < 30;
-                const isFreezing = travelerState.temperature < -10;
-                const isDying = travelerState.health < 25;
-
-                if (isStarving || isFreezing || isDying) {
-                    // 每2小时必定找到一件劣质品，上限为（离线小时数×2）件，但最多8件
-                    let findCount = Math.floor(hours / 2);
-                    findCount = Math.max(findCount, 1);    // 至少找1次
-                    findCount = Math.min(findCount, 8);    // 最多8件
-
-                    for (let i = 0; i < findCount; i++) {
-                        // 优先选择当前最需要的类别
-                        const needFood = travelerState.hunger < 30;
-                        const needWarm = travelerState.temperature < -15;
-                        const needMedical = travelerState.health < 30;
-
-                        const candidates = SURVIVAL_SCRAPS.filter(item => {
-                            if (needFood && item[4] === 'food') return true;
-                            if (needWarm && item[4] === 'warm') return true;
-                            if (needMedical && item[4] === 'medical') return true;
-                            if (!needFood && !needWarm && !needMedical) return true;
-                            return false;
-                        });
-                        const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
-                        const item = randChoice(pool);
-
-                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-
-                        // 70% 概率当场用掉
-                        if (Math.random() < 0.7) {
-                            const effect = item[5];
-                            if (effect) applyEffect(effect);
-                            travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}，当场就用掉了。`);
-                        } else {
-                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
-                            travelerState.log.push(`${timeStr} 旅行者拼尽力气从雪里刨出了点${item[0]}，小心地收进背包。`);
-                        }
-                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                    }
-                }
-                // 如果没到危机程度，只是背包空了，也有小概率自己找点东西
-                else if (travelerState.backpack.length === 0 && SURVIVAL_SCRAPS.length > 0) {
-                    const findChance = Math.min(0.6, hours * 0.1); // 最高60%概率
-                    if (Math.random() < findChance) {
-                        const item = randChoice(SURVIVAL_SCRAPS);
-                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-
-                        // 70% 概率当场用掉
-                        if (Math.random() < 0.7) {
-                            const effect = item[5];
-                            if (effect) applyEffect(effect);
-                            travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，当场就用掉了。`);
-                        } else {
-                            travelerState.backpack.push([item[0], Date.now() / 1000, 1]);
-                            travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，小心地收进背包。`);
-                        }
-                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                    }
                 }
             }
 
@@ -1370,42 +1296,6 @@
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
-                // 在线拾荒：旅行者独自前行时，有概率捡到劣质求生品
-            const isStarvingOnline = travelerState.hunger < 30;
-            const isFreezingOnline = travelerState.temperature < -10;
-            const isDyingOnline = travelerState.health < 25;
-
-            const scavengeChance = (isStarvingOnline || isFreezingOnline || isDyingOnline) ? 0.25 : 0.08;
-
-            if (Math.random() < scavengeChance && SURVIVAL_SCRAPS.length > 0) {
-                const needFood = travelerState.hunger < 30;
-                const needWarm = travelerState.temperature < -15;
-                const needMedical = travelerState.health < 30;
-
-                const candidates = SURVIVAL_SCRAPS.filter(item => {
-                    if (needFood && item[4] === 'food') return true;
-                    if (needWarm && item[4] === 'warm') return true;
-                    if (needMedical && item[4] === 'medical') return true;
-                    return !needFood && !needWarm && !needMedical;
-                });
-                const pool = candidates.length > 0 ? candidates : SURVIVAL_SCRAPS;
-                const item = randChoice(pool);
-
-                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-
-                // 80% 概率当场用掉
-                if (Math.random() < 0.8) {
-                    const effect = item[5];
-                    if (effect) applyEffect(effect);
-                    travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，当场就用掉了。`);
-                } else {
-                    travelerState.backpack.push([item[0], nowSec, 1]);
-                    travelerState.log.push(`${timeStr} 旅行者从雪里刨出了点${item[0]}，小心地收进背包。`);
-                }
-
-                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-            }
-            forceSaveAll();
         }
 
                 function getAdventureReport() {
