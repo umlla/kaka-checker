@@ -579,6 +579,7 @@
         <div class="sidebar">
             <div class="traveler-bar" id="travelerBar">
                 <span class="weather-tag" id="weatherTag">☁️ --</span>
+                <span class="weather-tag" id="tentTag" style="display:none;">🏕️ 无帐篷</span>
                 <div class="stat"><span class="icon">🌡️</span><span class="val" id="tempVal">-10</span>°C
                     <div class="stat-bar-wrap"><div class="stat-bar-fill fill-temp" id="tempBar" style="width:40%"></div></div>
                 </div>
@@ -721,6 +722,31 @@
         const ADVENTURE_REFRESH_SEC = 30 * 60;
         const TICK_INTERVAL_MS = 8000;
         const MAX_OFFLINE_HOURS = 10;
+        // 帐篷等级定义：连续天数 -> 名称、减免比例、升级日志
+        const TENT_LEVELS = [
+            { days: 3, name: '简陋帐篷', reduction: 0.2, log: '旅行者用捡来的帆布和树枝搭起了一座简陋帐篷，至少能挡一点风。' },
+            { days: 5, name: '加固帐篷', reduction: 0.4, log: '经过几天的努力，旅行者用冻土和兽皮加固了帐篷，它现在稳固多了。' },
+            { days: 7, name: '保暖帐篷', reduction: 0.6, log: '旅行者在帐篷内衬了厚厚的苔藓和羽毛，钻进帐篷就像钻进了一个温暖的茧。' },
+            { days: 10, name: '极地帐篷', reduction: 0.8, log: '帐篷已经焕然一新，双层防风墙加上雪鸮绒内衬，暴风雪也只能在门外咆哮。' },
+            { days: 14, name: '传奇庇护所', reduction: 1.0, log: '旅行者几乎把帐篷建成了一座微型冰屋，即使极夜降临，里面也温暖如春。' }
+        ];
+        const TENT_ICONS = ['', '🏕️', '⛺', '🛖', '🏠', '🏰'];
+        const TENT_DISPLAY_NAMES = ['', '简陋帐篷', '加固帐篷', '保暖帐篷', '极地帐篷', '传奇庇护所'];
+
+        // 天气每小时效果（在自然衰减之外额外应用）
+        // 天气在每次冒险刷新时施加的一次性效果（约30分钟的典型影响）
+        const WEATHER_EVENT_EFFECTS = {
+            "暴风雪": { temp: -3, mood: -1, health: -1 },
+            "晴朗":   { temp: 1, mood: 1 },
+            "极夜":   { temp: -1, mood: -2 },
+            "雾凇":   { temp: -1, mood: 1 },
+            "冰雹":   { temp: -2, health: -1 },
+            "小雪":   { temp: -1, mood: 0.5 },
+            "极光":   { mood: 2 },
+            "冻雨":   { temp: -2, health: -0.5 },
+            "白化天": { mood: -1 },
+            "钻石尘": { temp: -1, mood: 1 }
+        };
 
         const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
         const WEATHER_EFFECTS = {
@@ -860,7 +886,9 @@
         });
         let travelerState = loadJSON(LS_KEYS.traveler, {
             temperature: -10, health: 80, hunger: 70, mood: 60,
-            backpack: [], log: [], lastUpdate: Date.now() / 1000
+            backpack: [], log: [], lastUpdate: Date.now() / 1000,
+            tentLevel: 0,       // 当前帐篷等级（索引，0表示无帐篷）
+            lastStreak: 0       // 上次记录的连续打卡天数
         });
         let adventureState = loadJSON(LS_KEYS.adventure, {
             weather: '晴朗', event: '旅行者正在雪原上跋涉，四周一片寂静，只有风声相伴。', updatedAt: 0
@@ -872,7 +900,8 @@
             temperature: travelerState.temperature,
             health: travelerState.health,
             hunger: travelerState.hunger,
-            mood: travelerState.mood
+            mood: travelerState.mood,
+            tentLevel: 0
         };
         let dreamTriggered = false;      // 防止重复触发
         let dreamClickCount = 0;         // 继续沉睡点击次数
@@ -1053,11 +1082,12 @@
             saveJSON(LS_KEYS.adventure, adventureState);
             // 更新缓存
             lastSavedTraveler = {
-                temperature: travelerState.temperature,
-                health: travelerState.health,
-                hunger: travelerState.hunger,
-                mood: travelerState.mood
-            };
+            temperature: travelerState.temperature,
+            health: travelerState.health,
+            hunger: travelerState.hunger,
+            mood: travelerState.mood,
+            tentLevel: travelerState.tentLevel
+        };
             isDirty = false;
         }
 
@@ -1111,28 +1141,23 @@
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-            // 自然衰减（不直接扣健康，健康由 applyEffect 统一处理）
+            // 自然衰减（不受天气影响）
             travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
             travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
             travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
 
+            // 饱腹过低额外扣血（保留原有逻辑）
+            if (travelerState.hunger < 20) {
+                travelerState.health = Math.max(0, travelerState.health - hours * 4);
+            }
+
+            // 限制数值范围
             travelerState.temperature = clamp(travelerState.temperature, -30, 10);
             travelerState.health = clamp(travelerState.health, 0, 100);
             travelerState.hunger = clamp(travelerState.hunger, 0, 100);
             travelerState.mood = clamp(travelerState.mood, 0, 100);
 
-            // 阈值比较：只有当数值变化明显时才标记为脏
-            const dTemp = Math.abs(travelerState.temperature - lastSavedTraveler.temperature);
-            const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
-            const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
-            const dMood = Math.abs(travelerState.mood - lastSavedTraveler.mood);
-
-            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3) {
-                markDirty();
-            }
-
-            // ---------- 离线自我维持 ----------
-                        // ---------- 离线使用背包物品 ----------
+            // 离线使用背包物品（只使用，不找破烂）
             if (hours > 0.1) {
                 const usageCycles = Math.floor(hours * 2);
                 for (let i = 0; i < usageCycles; i++) {
@@ -1140,6 +1165,39 @@
                     if (travelerState.backpack.length === 0) break;
                 }
             }
+
+            // 帐篷升级/降级检测（基于连续打卡天数）
+            const currentStreak = calcStats().streak;
+            if (currentStreak !== travelerState.lastStreak) {
+                if (currentStreak < travelerState.lastStreak) {
+                    // 断卡收回帐篷
+                    if (travelerState.tentLevel > 0) {
+                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                        travelerState.log.push(`${timeStr} 🏕️ 连续打卡中断，帐篷被风雪卷走了。`);
+                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                    }
+                    travelerState.tentLevel = 0;
+                } else {
+                    // 检查升级
+                    for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
+                        if (currentStreak >= TENT_LEVELS[i].days && travelerState.tentLevel < i + 1) {
+                            travelerState.tentLevel = i + 1;
+                            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                            travelerState.log.push(`${timeStr} ⛺ ${TENT_LEVELS[i].log}`);
+                            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                            break;
+                        }
+                    }
+                }
+                travelerState.lastStreak = currentStreak;
+            }
+
+            // 脏标记
+            const dTemp = Math.abs(travelerState.temperature - lastSavedTraveler.temperature);
+            const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
+            const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
+            const dMood = Math.abs(travelerState.mood - lastSavedTraveler.mood);
+            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3) markDirty();
 
             travelerState.lastUpdate = nowSec;
         }
@@ -1209,6 +1267,29 @@
                             const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                             travelerState.log = travelerState.log || [];
                             travelerState.log.push(`${timeStr} ${useText}（剩余耐久：${newDurability}）`);
+                                // 天气与帐篷总结日志
+                            const weatherEffect = WEATHER_HOURLY_EFFECTS[adventureState.weather];
+                            if (weatherEffect) {
+                                let reduction = 0;
+                                let tentName = '';
+                                if (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length) {
+                                    reduction = TENT_LEVELS[travelerState.tentLevel - 1].reduction;
+                                    tentName = TENT_LEVELS[travelerState.tentLevel - 1].name;
+                                }
+                                const parts = [];
+                                if (weatherEffect.temp) parts.push(`温度${weatherEffect.temp > 0 ? '+' : ''}${(weatherEffect.temp * 0.5).toFixed(0)}`);
+                                if (weatherEffect.mood) parts.push(`心情${weatherEffect.mood > 0 ? '+' : ''}${(weatherEffect.mood * 0.5).toFixed(0)}`);
+                                if (weatherEffect.health) parts.push(`健康${weatherEffect.health > 0 ? '+' : ''}${(weatherEffect.health * 0.5).toFixed(0)}`);
+                                if (parts.length > 0) {
+                                    let logMsg = `🌦️ ${adventureState.weather}：${parts.join('，')}`;
+                                    if (tentName && reduction > 0) {
+                                        logMsg += `。${tentName}为你抵消了${Math.round(reduction * 100)}%的负面影响`;
+                                    }
+                                    const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                                    travelerState.log.push(`${timeStr} ${logMsg}`);
+                                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                                }
+                            }
                             if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                             
                             if (newDurability <= 0) {
@@ -1241,6 +1322,10 @@
         function refreshAdventure() {
             const nowSec = Date.now() / 1000;
             updateTravelerState(nowSec);
+            // 解锁血月残象主题
+            if (travelerState.health <= 10 && !unlockedThemes.includes('bloodmoon')) {
+                unlockTheme('bloodmoon');
+            }            
 
             const isExtreme =
                 travelerState.hunger <= 8 ||
@@ -1254,10 +1339,7 @@
                 if (travelerState.hunger <= 8) candidates.push('hunger');
                 if (travelerState.mood <= 8) candidates.push('mood');
                 if (travelerState.health <= 18) candidates.push('health');
-                // 解锁血月残象主题
-                if (travelerState.health <= 10 && !unlockedThemes.includes('bloodmoon')) {
-                    unlockTheme('bloodmoon');
-                }
+                
                 if (travelerState.temperature <= -28) candidates.push('temp');
                 const type = candidates[Math.floor(Math.random() * candidates.length)];
                 eventObj = EXTREME_EVENTS[type] ? randChoice(EXTREME_EVENTS[type]) : randChoice(EVENT_POOL);
@@ -1296,6 +1378,50 @@
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
+            // ========== 新增：天气一次性效果与帐篷减免 ==========
+            const weatherEffect = WEATHER_EVENT_EFFECTS[newWeather];
+            if (weatherEffect) {
+                let reduction = 0;
+                let tentName = '';
+                if (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length) {
+                    reduction = TENT_LEVELS[travelerState.tentLevel - 1].reduction;
+                    tentName = TENT_LEVELS[travelerState.tentLevel - 1].name;
+                }
+
+                // 构造效果对象，应用减免
+                const effective = {};
+                if (weatherEffect.temp) {
+                    let val = weatherEffect.temp;
+                    if (val < 0) val = Math.round(val * (1 - reduction));
+                    effective.temp = val;
+                }
+                if (weatherEffect.mood) {
+                    let val = weatherEffect.mood;
+                    if (val < 0) val = Math.round(val * (1 - reduction));
+                    effective.mood = val;
+                }
+                if (weatherEffect.health) {
+                    let val = weatherEffect.health;
+                    if (val < 0) val = Math.round(val * (1 - reduction));
+                    effective.health = val;
+                }
+                if (Object.keys(effective).length > 0) {
+                    applyEffect(effective);
+
+                    // 生成天气影响日志
+                    const effStr = formatEffects(effective);
+                    const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                    let logMsg = `🌦️ ${newWeather}：${effStr}`;
+                    if (tentName && reduction > 0) {
+                        logMsg += `。${tentName}抵消了约${Math.round(reduction * 100)}%的恶劣影响`;
+                    }
+                    travelerState.log.push(`${timeStr} ${logMsg}`);
+                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                }
+            }
+            // ========== 新增结束 ==========
+
+            forceSaveAll();
         }
 
                 function getAdventureReport() {
@@ -1769,7 +1895,17 @@
             if (travelerState.health <= 5 && !dreamTriggered) {
                 showDream();
             }
-            
+                // 更新帐篷图标与名称
+            const tentTag = document.getElementById('tentTag');
+            if (tentTag) {
+                const level = travelerState.tentLevel || 0;
+                if (level > 0 && level < TENT_ICONS.length) {
+                    tentTag.style.display = 'inline-block';
+                    tentTag.textContent = TENT_ICONS[level] + ' ' + TENT_DISPLAY_NAMES[level];
+                } else {
+                    tentTag.style.display = 'none';
+                }
+            }
         }
 
         function renderPanel(tabName) {
