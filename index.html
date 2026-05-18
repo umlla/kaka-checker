@@ -890,6 +890,33 @@
             tentLevel: 0,       // 当前帐篷等级（索引，0表示无帐篷）
             lastStreak: 0       // 上次记录的连续打卡天数
         });
+        // 帐篷系统初始化：兼容旧存档，根据已有连续天数直接设置帐篷等级
+        (function initTentOnUpgrade() {
+            if (travelerState.tentLevel === undefined) {
+                travelerState.tentLevel = 0;
+            }
+            if (travelerState.lastStreak === undefined) {
+                // 旧存档没有 lastStreak，根据当前连续天数初始化
+                const currentStreak = calcStats().streak;
+                travelerState.lastStreak = currentStreak;
+                
+                // 根据当前连续天数设置帐篷等级
+                let highestLevel = 0;
+                for (let i = 0; i < TENT_LEVELS.length; i++) {
+                    if (currentStreak >= TENT_LEVELS[i].days) {
+                        highestLevel = i + 1;
+                    }
+                }
+                if (highestLevel > 0 && travelerState.tentLevel < highestLevel) {
+                    travelerState.tentLevel = highestLevel;
+                    const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                    const tentInfo = TENT_LEVELS[highestLevel - 1];
+                    travelerState.log.push(`${timeStr} ⛺ 你之前的努力没有白费——${tentInfo.log}`);
+                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                    forceSaveAll();
+                }
+            }
+        })();
         let adventureState = loadJSON(LS_KEYS.adventure, {
             weather: '晴朗', event: '旅行者正在雪原上跋涉，四周一片寂静，只有风声相伴。', updatedAt: 0
         });
@@ -901,7 +928,7 @@
             health: travelerState.health,
             hunger: travelerState.hunger,
             mood: travelerState.mood,
-            tentLevel: 0
+            tentLevel: travelerState.tentLevel || 0
         };
         let dreamTriggered = false;      // 防止重复触发
         let dreamClickCount = 0;         // 继续沉睡点击次数
