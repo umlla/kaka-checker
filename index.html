@@ -1277,60 +1277,28 @@
                 if (travelerState[need.stat] < need.threshold) {
                     const idx = bp.findIndex(([name]) => getItemCategory(name) === need.category);
                     if (idx === -1) continue;
-                    
+
                     const item = bp[idx];
                     const itemName = item[0];
                     const durability = item[2] || 1;
-                    const effect = getItemEffect(itemName); 
-                    
-                    // ——————— 耐久物品处理（数据驱动）———————
+                    const effect = getItemEffect(itemName);
+
+                    // 耐久物品处理
                     if (effect?.durability !== undefined) {
-                        const useProbability = 0.3;
-                        if (Math.random() < useProbability) {
+                        if (Math.random() < 0.3) {
                             const newDurability = durability - 1;
-                            
-                            // 优先使用 onUse 效果，否则回退到 effect 中的直接数值（兼容）
                             const useEffect = effect.onUse || {};
                             if (Object.keys(useEffect).length > 0) {
                                 applyEffect(useEffect);
                             } else {
-                                // 无 onUse 时，从 effect 里提取标准字段
-                                const directEffect = {};
                                 ['hunger','health','temp','mood'].forEach(k => {
-                                    if (effect[k] !== undefined) directEffect[k] = effect[k];
+                                    if (effect[k] !== undefined) applyEffect({[k]: effect[k]});
                                 });
-                                applyEffect(directEffect);
                             }
-                            
                             const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
                             const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                            travelerState.log = travelerState.log || [];
                             travelerState.log.push(`${timeStr} ${useText}（剩余耐久：${newDurability}）`);
-                                // 天气与帐篷总结日志
-                            const weatherEffect = WEATHER_HOURLY_EFFECTS[adventureState.weather];
-                            if (weatherEffect) {
-                                let reduction = 0;
-                                let tentName = '';
-                                if (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length) {
-                                    reduction = TENT_LEVELS[travelerState.tentLevel - 1].reduction;
-                                    tentName = TENT_LEVELS[travelerState.tentLevel - 1].name;
-                                }
-                                const parts = [];
-                                if (weatherEffect.temp) parts.push(`温度${weatherEffect.temp > 0 ? '+' : ''}${(weatherEffect.temp * 0.5).toFixed(0)}`);
-                                if (weatherEffect.mood) parts.push(`心情${weatherEffect.mood > 0 ? '+' : ''}${(weatherEffect.mood * 0.5).toFixed(0)}`);
-                                if (weatherEffect.health) parts.push(`健康${weatherEffect.health > 0 ? '+' : ''}${(weatherEffect.health * 0.5).toFixed(0)}`);
-                                if (parts.length > 0) {
-                                    let logMsg = `🌦️ ${adventureState.weather}：${parts.join('，')}`;
-                                    if (tentName && reduction > 0) {
-                                        logMsg += `。${tentName}为你抵消了${Math.round(reduction * 100)}%的负面影响`;
-                                    }
-                                    const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                                    travelerState.log.push(`${timeStr} ${logMsg}`);
-                                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                                }
-                            }
                             if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                            
                             if (newDurability <= 0) {
                                 bp.splice(idx, 1);
                             } else {
@@ -1340,13 +1308,12 @@
                         } else {
                             continue;
                         }
-                    } 
-                    // ——————— 一次性物品处理 ———————
+                    }
+                    // 一次性物品处理
                     else {
                         if (effect) applyEffect(effect);
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                         const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
-                        travelerState.log = travelerState.log || [];
                         travelerState.log.push(`${timeStr} ${useText}`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
                         bp.splice(idx, 1);
@@ -1417,9 +1384,9 @@
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
-            // ========== 新增：天气一次性效果与帐篷减免 ==========
-            const weatherEffect = WEATHER_EVENT_EFFECTS[newWeather];
-            if (weatherEffect) {
+                    // 一次性天气效果（受帐篷减免）
+            const effect = WEATHER_HOURLY_EFFECTS[newWeather];
+            if (effect) {
                 let reduction = 0;
                 let tentName = '';
                 if (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length) {
@@ -1427,38 +1394,34 @@
                     tentName = TENT_LEVELS[travelerState.tentLevel - 1].name;
                 }
 
-                // 构造效果对象，应用减免
-                const effective = {};
-                if (weatherEffect.temp) {
-                    let val = weatherEffect.temp;
-                    if (val < 0) val = Math.round(val * (1 - reduction));
-                    effective.temp = val;
-                }
-                if (weatherEffect.mood) {
-                    let val = weatherEffect.mood;
-                    if (val < 0) val = Math.round(val * (1 - reduction));
-                    effective.mood = val;
-                }
-                if (weatherEffect.health) {
-                    let val = weatherEffect.health;
-                    if (val < 0) val = Math.round(val * (1 - reduction));
-                    effective.health = val;
-                }
-                if (Object.keys(effective).length > 0) {
-                    applyEffect(effective);
+                let tempChange = effect.temp || 0;
+                let moodChange = effect.mood || 0;
+                let healthChange = effect.health || 0;
 
-                    // 生成天气影响日志
-                    const effStr = formatEffects(effective);
-                    const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                    let logMsg = `🌦️ ${newWeather}：${effStr}`;
-                    if (tentName && reduction > 0) {
-                        logMsg += `。${tentName}抵消了约${Math.round(reduction * 100)}%的恶劣影响`;
-                    }
-                    travelerState.log.push(`${timeStr} ${logMsg}`);
-                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                // 负面效果受帐篷减免
+                if (tempChange < 0) tempChange *= (1 - reduction);
+                if (moodChange < 0) moodChange *= (1 - reduction);
+                if (healthChange < 0) healthChange *= (1 - reduction);
+
+                // 应用效果
+                travelerState.temperature = clamp(travelerState.temperature + tempChange, -30, 10);
+                travelerState.mood = clamp(travelerState.mood + moodChange, 0, 100);
+                travelerState.health = clamp(travelerState.health + healthChange, 0, 100);
+
+                // 生成日志
+                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                const parts = [];
+                if (tempChange !== 0) parts.push(`温度${tempChange > 0 ? '+' : ''}${tempChange.toFixed(0)}`);
+                if (moodChange !== 0) parts.push(`心情${moodChange > 0 ? '+' : ''}${moodChange.toFixed(0)}`);
+                if (healthChange !== 0) parts.push(`健康${healthChange > 0 ? '+' : ''}${healthChange.toFixed(0)}`);
+                let logMsg = `🌦️ 天气切换为${newWeather}`;
+                if (parts.length > 0) logMsg += `：${parts.join('，')}`;
+                if (tentName && reduction > 0) {
+                    logMsg += `。${tentName}为你抵消了${Math.round(reduction * 100)}%的负面影响`;
                 }
+                travelerState.log.push(`${timeStr} ${logMsg}`);
+                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
             }
-            // ========== 新增结束 ==========
 
             forceSaveAll();
         }
