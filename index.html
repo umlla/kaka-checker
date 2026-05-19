@@ -924,10 +924,10 @@
         let isDirty = false;
 
         let lastSavedTraveler = {
-            temperature: travelerState.temperature,
-            health: travelerState.health,
-            hunger: travelerState.hunger,
-            mood: travelerState.mood,
+            temperature: travelerState.temperature || -10,
+            health: travelerState.health || 80,
+            hunger: travelerState.hunger || 70,
+            mood: travelerState.mood || 60,
             tentLevel: travelerState.tentLevel || 0
         };
         let dreamTriggered = false;      // 防止重复触发
@@ -1109,13 +1109,25 @@
             saveJSON(LS_KEYS.adventure, adventureState);
             // 更新缓存
             lastSavedTraveler = {
-            temperature: travelerState.temperature,
-            health: travelerState.health,
-            hunger: travelerState.hunger,
-            mood: travelerState.mood,
-            tentLevel: travelerState.tentLevel
+            temperature: travelerState.temperature || -10,
+            health: travelerState.health || 80,
+            hunger: travelerState.hunger || 70,
+            mood: travelerState.mood || 60,
+            tentLevel: travelerState.tentLevel || 0
         };
             isDirty = false;
+        }
+        // 存档迁移：补全旧版本缺少的字段
+        function migrateSaveData() {
+            // travelerState 补全
+            if (travelerState.tentLevel === undefined) travelerState.tentLevel = 0;
+            if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
+            if (!travelerState.backpack) travelerState.backpack = [];
+            if (!travelerState.log) travelerState.log = [];
+
+            // userData 补全
+            if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
+            if (!userData.lastDailyDraw && userData.lastDailyDraw !== null) userData.lastDailyDraw = null;
         }
 
         // ==================== 物品查询与堆叠 ====================
@@ -1195,10 +1207,10 @@
 
             // 帐篷升级/降级检测（基于连续打卡天数）
             const currentStreak = calcStats().streak;
-            if (currentStreak !== travelerState.lastStreak) {
+            if (currentStreak !== (travelerState.lastStreak || 0)){
                 if (currentStreak < travelerState.lastStreak) {
                     // 断卡收回帐篷
-                    if (travelerState.tentLevel > 0) {
+                    if ((travelerState.tentLevel || 0) > 0){
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                         travelerState.log.push(`${timeStr} 🏕️ 连续打卡中断，帐篷被风雪卷走了。`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
@@ -1892,6 +1904,7 @@
                     travelerState = data.travelerState;
                     adventureState = data.adventureState;
                     forceSaveAll();
+                    migrateSaveData(); 
                     updateTravelerBar();
                     const activeTab = document.querySelector('.tab-btn.active');
                     if (activeTab) renderPanel(activeTab.dataset.tab);
@@ -1907,6 +1920,7 @@
         function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
         function updateTravelerBar() {
+            migrateSaveData();
             updateTravelerState(Date.now() / 1000);
             const t = travelerState;
             document.getElementById('tempVal').textContent = Math.round(t.temperature);
