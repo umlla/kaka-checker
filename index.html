@@ -733,19 +733,19 @@
         const TENT_ICONS = ['', '🏕️', '⛺', '🛖', '🏠', '🏰'];
         const TENT_DISPLAY_NAMES = ['', '简陋帐篷', '加固帐篷', '保暖帐篷', '极地帐篷', '传奇庇护所'];
 
-        // 天气每小时效果（在自然衰减之外额外应用）
-        // 天气在每次冒险刷新时施加的一次性效果（约30分钟的典型影响）
-        const WEATHER_EVENT_EFFECTS = {
-            "暴风雪": { temp: -3, mood: -1, health: -1 },
-            "晴朗":   { temp: 1, mood: 1 },
-            "极夜":   { temp: -1, mood: -2 },
-            "雾凇":   { temp: -1, mood: 1 },
-            "冰雹":   { temp: -2, health: -1 },
-            "小雪":   { temp: -1, mood: 0.5 },
-            "极光":   { mood: 2 },
-            "冻雨":   { temp: -2, health: -0.5 },
-            "白化天": { mood: -1 },
-            "钻石尘": { temp: -1, mood: 1 }
+        
+        // 天气衰减速率调整（乘数，1为正常，>1衰减更快，<1衰减更慢）
+        const WEATHER_RATES = {
+            "暴风雪": { temp: 1.4, mood: 1.1, health: 1.0, hunger: 1.2, desc: "暴风雪肆虐，温度下降速度加快40%，体力消耗更快。" },
+            "晴朗":   { temp: 0.7, mood: 0.8, health: 1.0, hunger: 0.9, desc: "天空晴朗，温度下降减缓30%，心情保持良好。" },
+            "极夜":   { temp: 1.2, mood: 1.3, health: 1.0, hunger: 1.0, desc: "漫长的极夜让人心情沉重，心情下降加快30%。" },
+            "雾凇":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, desc: "雾凇挂在枝头，景色静谧，所有衰减略微减缓。" },
+            "冰雹":   { temp: 1.3, health: 1.1, mood: 1.0, hunger: 1.1, desc: "冰雹砸下，温度下降加快30%，健康略有额外损耗。" },
+            "小雪":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, desc: "小雪纷纷，温度下降减缓10%，心情平静。" },
+            "极光":   { mood: 0.6, temp: 0.9, health: 1.0, hunger: 1.0, desc: "极光在头顶舞动，心情大幅改善，衰减速度降低40%。" },
+            "冻雨":   { temp: 1.3, health: 1.1, mood: 1.1, hunger: 1.1, desc: "冻雨刺骨，温度与健康衰减加快。" },
+            "白化天": { temp: 1.0, mood: 1.2, health: 1.0, hunger: 1.0, desc: "白茫茫一片，方向感丧失，心情下降加快20%。" },
+            "钻石尘": { temp: 0.8, mood: 0.8, health: 1.0, hunger: 1.0, desc: "细小的冰晶在空中闪烁，温度与心情衰减减缓。" }
         };
 
         const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
@@ -887,8 +887,8 @@
         let travelerState = loadJSON(LS_KEYS.traveler, {
             temperature: -10, health: 80, hunger: 70, mood: 60,
             backpack: [], log: [], lastUpdate: Date.now() / 1000,
-            tentLevel: 0,       // 当前帐篷等级（索引，0表示无帐篷）
-            lastStreak: 0       // 上次记录的连续打卡天数
+            tentLevel: 0, lastStreak: 0, tentCheckedDate: '',
+            weatherRate: { appliedAt: 0, temp: 1, mood: 1, health: 1, hunger: 1, currentWeather: '' }
         });
         // 帐篷系统初始化：兼容旧存档，根据已有连续天数直接设置帐篷等级
         (function initTentOnUpgrade() {
@@ -1124,6 +1124,12 @@
             if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
             if (!travelerState.backpack) travelerState.backpack = [];
             if (!travelerState.log) travelerState.log = [];
+                // 补全天气速率字段
+            travelerState.weatherRate = {
+                appliedAt: Date.now() / 1000,   // 当前时间，避免日志刷屏
+                temp: 1, mood: 1, health: 1, hunger: 1,
+                currentWeather: adventureState.weather || '小雪'
+            };
 
             // userData 补全
             if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
@@ -1173,28 +1179,66 @@
             travelerState.backpack.forEach(([name]) => names.add(name));
             return names;
         }
+        function applyWeatherRate(nowSec) {
+            // 防御：如果 weatherRate 不存在，初始化
+            if (!travelerState.weatherRate) {
+                travelerState.weatherRate = {
+                    appliedAt: nowSec,   // 用 nowSec 而不是 0
+                    temp: 1, mood: 1, health: 1, hunger: 1,
+                    currentWeather: adventureState.weather || '小雪'
+                };
+            }
 
+            const currentWeather = adventureState.weather;
+            const lastApplied = travelerState.weatherRate.appliedAt || 0;
+            const weatherChanged = (currentWeather !== (travelerState.weatherRate.currentWeather || ''));
+            const hoursSinceApply = (nowSec - lastApplied) / 3600;
+
+            // 每 2 小时或天气切换时重新应用速率
+            if (hoursSinceApply >= 2 || weatherChanged) {
+                const rates = WEATHER_RATES[currentWeather] || WEATHER_RATES['小雪'];  // ← 关键：必须声明 rates
+
+                // 生成日志
+                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                const rateText = [
+                    `温度衰减速率：×${rates.temp}`,
+                    `心情衰减速率：×${rates.mood}`,
+                    `健康衰减速率：×${rates.health}`,
+                    `饱腹衰减速率：×${rates.hunger}`
+                ].join('，');
+                travelerState.log.push(`${timeStr} 🌡️ ${currentWeather} - ${rates.desc}（${rateText}）`);
+                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            }
+        }
         // ==================== 旅行者状态 ====================
         function updateTravelerState(nowSec = Date.now()/1000) {
             const elapsed = nowSec - (travelerState.lastUpdate || nowSec);
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-            // 自然衰减（不受天气影响）
-            travelerState.hunger = Math.max(0, travelerState.hunger - hours * 5);
-            travelerState.mood = Math.max(0, travelerState.mood - hours * 2);
-            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
+                // ---------- 应用天气速率 ----------
+            applyWeatherRate(nowSec);
+            const wr = travelerState.weatherRate;
 
-            // 饱腹过低额外扣血（保留原有逻辑）
-            if (travelerState.hunger < 20) {
-                travelerState.health = Math.max(0, travelerState.health - hours * 4);
+            // 自然衰减（基础值 × 天气速率）
+            let tempDecay = hours * 1;   // 基础温度每小时下降1
+            let moodDecay = hours * 2;   // 基础心情每小时下降2
+            let hungerDecay = hours * 5; // 基础饱腹每小时下降5
+            let healthDecay = 0;         // 基础健康不自然衰减
+
+            tempDecay *= wr.temp;
+            moodDecay *= wr.mood;
+            hungerDecay *= wr.hunger;
+
+            travelerState.temperature = Math.max(-30, travelerState.temperature - tempDecay);
+            travelerState.mood        = Math.max(0, travelerState.mood - moodDecay);
+            travelerState.hunger      = Math.max(0, travelerState.hunger - hungerDecay);
+
+            // 饱腹极低时额外扣血
+            if (travelerState.hunger < 10) {
+                healthDecay = hours * 2 * wr.health;
+                travelerState.health = Math.max(0, travelerState.health - healthDecay);
             }
-
-            // 限制数值范围
-            travelerState.temperature = clamp(travelerState.temperature, -30, 10);
-            travelerState.health = clamp(travelerState.health, 0, 100);
-            travelerState.hunger = clamp(travelerState.hunger, 0, 100);
-            travelerState.mood = clamp(travelerState.mood, 0, 100);
 
             // 离线使用背包物品（只使用，不找破烂）
             if (hours > 0.1) {
@@ -1205,21 +1249,22 @@
                 }
             }
 
-            // 帐篷升级/降级检测（基于连续打卡天数）
-            const currentStreak = calcStats().streak;
-            if (currentStreak !== (travelerState.lastStreak || 0)){
-                if (currentStreak < travelerState.lastStreak) {
-                    // 断卡收回帐篷
-                    if ((travelerState.tentLevel || 0) > 0){
+                // 帐篷升级/降级（只在日期变化时检查）
+            const todayStr = getToday();
+            if (todayStr !== (travelerState.tentCheckedDate || '')) {
+                const currentStreak = calcStats().streak;
+                if (currentStreak < (travelerState.lastStreak || 0)) {
+                    // 连续天数减少 → 断卡
+                    if ((travelerState.tentLevel || 0) > 0) {
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                         travelerState.log.push(`${timeStr} 🏕️ 连续打卡中断，帐篷被风雪卷走了。`);
                         if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                        travelerState.tentLevel = 0;
                     }
-                    travelerState.tentLevel = 0;
-                } else {
-                    // 检查升级
+                } else if (currentStreak > (travelerState.lastStreak || 0)) {
+                    // 连续天数增加 → 检查升级
                     for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
-                        if (currentStreak >= TENT_LEVELS[i].days && travelerState.tentLevel < i + 1) {
+                        if (currentStreak >= TENT_LEVELS[i].days && (travelerState.tentLevel || 0) < i + 1) {
                             travelerState.tentLevel = i + 1;
                             const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                             travelerState.log.push(`${timeStr} ⛺ ${TENT_LEVELS[i].log}`);
@@ -1229,6 +1274,7 @@
                     }
                 }
                 travelerState.lastStreak = currentStreak;
+                travelerState.tentCheckedDate = todayStr;
             }
 
             // 脏标记
@@ -1372,7 +1418,7 @@
             }
             if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
 
-            // 天气变化更新飘雪
+              // 天气变化更新飘雪
             const newWeather = randChoice(WEATHERS);
             if (newWeather !== adventureState.weather) {
                 initSnowfall(newWeather);
@@ -1384,53 +1430,15 @@
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
-                    // 一次性天气效果（受帐篷减免）
-            const effect = WEATHER_HOURLY_EFFECTS[newWeather];
-            if (effect) {
-                let reduction = 0;
-                let tentName = '';
-                if (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length) {
-                    reduction = TENT_LEVELS[travelerState.tentLevel - 1].reduction;
-                    tentName = TENT_LEVELS[travelerState.tentLevel - 1].name;
-                }
-
-                let tempChange = effect.temp || 0;
-                let moodChange = effect.mood || 0;
-                let healthChange = effect.health || 0;
-
-                // 负面效果受帐篷减免
-                if (tempChange < 0) tempChange *= (1 - reduction);
-                if (moodChange < 0) moodChange *= (1 - reduction);
-                if (healthChange < 0) healthChange *= (1 - reduction);
-
-                // 应用效果
-                travelerState.temperature = clamp(travelerState.temperature + tempChange, -30, 10);
-                travelerState.mood = clamp(travelerState.mood + moodChange, 0, 100);
-                travelerState.health = clamp(travelerState.health + healthChange, 0, 100);
-
-                // 生成日志
-                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                const parts = [];
-                if (tempChange !== 0) parts.push(`温度${tempChange > 0 ? '+' : ''}${tempChange.toFixed(0)}`);
-                if (moodChange !== 0) parts.push(`心情${moodChange > 0 ? '+' : ''}${moodChange.toFixed(0)}`);
-                if (healthChange !== 0) parts.push(`健康${healthChange > 0 ? '+' : ''}${healthChange.toFixed(0)}`);
-                let logMsg = `🌦️ 天气切换为${newWeather}`;
-                if (parts.length > 0) logMsg += `：${parts.join('，')}`;
-                if (tentName && reduction > 0) {
-                    logMsg += `。${tentName}为你抵消了${Math.round(reduction * 100)}%的负面影响`;
-                }
-                travelerState.log.push(`${timeStr} ${logMsg}`);
-                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-            }
 
             forceSaveAll();
         }
 
-                function getAdventureReport() {
-                    const nowSec = Date.now() / 1000;
-                    updateTravelerState(nowSec);
-                    if (!adventureState.updatedAt || nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) {
-                        refreshAdventure();
+        function getAdventureReport() {
+            const nowSec = Date.now() / 1000;
+            updateTravelerState(nowSec);
+            if (!adventureState.updatedAt || nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) {
+                refreshAdventure();
                     }
                     return {
                         weather: adventureState.weather,
