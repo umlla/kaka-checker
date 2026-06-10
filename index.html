@@ -1124,12 +1124,6 @@
             if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
             if (!travelerState.backpack) travelerState.backpack = [];
             if (!travelerState.log) travelerState.log = [];
-                // 补全天气速率字段
-            travelerState.weatherRate = {
-                appliedAt: Date.now() / 1000,   // 当前时间，避免日志刷屏
-                temp: 1, mood: 1, health: 1, hunger: 1,
-                currentWeather: adventureState.weather || '小雪'
-            };
 
             // userData 补全
             if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
@@ -1179,52 +1173,20 @@
             travelerState.backpack.forEach(([name]) => names.add(name));
             return names;
         }
-        function applyWeatherRate(nowSec) {
-            // 防御：如果 weatherRate 不存在，初始化
-            if (!travelerState.weatherRate) {
-                travelerState.weatherRate = {
-                    appliedAt: nowSec,   // 用 nowSec 而不是 0
-                    temp: 1, mood: 1, health: 1, hunger: 1,
-                    currentWeather: adventureState.weather || '小雪'
-                };
-            }
-
-            const currentWeather = adventureState.weather;
-            const lastApplied = travelerState.weatherRate.appliedAt || 0;
-            const weatherChanged = (currentWeather !== (travelerState.weatherRate.currentWeather || ''));
-            const hoursSinceApply = (nowSec - lastApplied) / 3600;
-
-            // 每 2 小时或天气切换时重新应用速率
-            if (hoursSinceApply >= 2 || weatherChanged) {
-                const rates = WEATHER_RATES[currentWeather] || WEATHER_RATES['小雪'];  // ← 关键：必须声明 rates
-
-                // 生成日志
-                const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                const rateText = [
-                    `温度衰减速率：×${rates.temp}`,
-                    `心情衰减速率：×${rates.mood}`,
-                    `健康衰减速率：×${rates.health}`,
-                    `饱腹衰减速率：×${rates.hunger}`
-                ].join('，');
-                travelerState.log.push(`${timeStr} 🌡️ ${currentWeather} - ${rates.desc}（${rateText}）`);
-                if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-            }
-        }
+        
         // ==================== 旅行者状态 ====================
         function updateTravelerState(nowSec = Date.now()/1000) {
             const elapsed = nowSec - (travelerState.lastUpdate || nowSec);
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-                // ---------- 应用天气速率 ----------
-            applyWeatherRate(nowSec);
+              
             const wr = travelerState.weatherRate;
 
-            // 自然衰减（基础值 × 天气速率）
-            let tempDecay = hours * 1;   // 基础温度每小时下降1
-            let moodDecay = hours * 2;   // 基础心情每小时下降2
-            let hungerDecay = hours * 5; // 基础饱腹每小时下降5
-            let healthDecay = 0;         // 基础健康不自然衰减
+            // 自然衰减（固定速率，不再受天气影响）
+            travelerState.hunger      = Math.max(0, travelerState.hunger      - hours * 5);
+            travelerState.mood        = Math.max(0, travelerState.mood        - hours * 2);
+            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
 
             tempDecay *= wr.temp;
             moodDecay *= wr.mood;
@@ -1418,19 +1380,18 @@
             }
             if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
 
-              // 天气变化更新飘雪
+           // 天气变化更新飘雪
             const newWeather = randChoice(WEATHERS);
             if (newWeather !== adventureState.weather) {
                 initSnowfall(newWeather);
             }
 
-            // 最终设置冒险状态
+            // 设置冒险状态（不再包含数值变化）
             adventureState = {
                 weather: newWeather,
                 event: eventObj.text,
                 updatedAt: nowSec,
             };
-
             forceSaveAll();
         }
 
