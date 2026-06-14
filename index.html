@@ -560,6 +560,97 @@
         .theme-toggle-btn:active {
             transform: scale(0.9);
         }
+        /* ========== 安瑟小猫聊天 ========== */
+        .anser-chat {
+            position: fixed; bottom: 90px; right: 24px;
+            width: 330px; max-height: 460px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--blur-amount));
+            -webkit-backdrop-filter: blur(var(--blur-amount));
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            z-index: 99;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        .anser-chat-minimized .anser-chat-body { display: none; }
+        .anser-chat-minimized { width: auto; max-height: none; }
+        .anser-chat-header {
+            padding: 10px 14px; font-weight: 600;
+            color: var(--text); display: flex;
+            justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.04);
+            cursor: pointer;
+        }
+        .anser-cat-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #f0c8a0; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 1.2rem; margin-right: 8px;
+        }
+        .anser-chat-body {
+            display: flex; flex-direction: column;
+            height: 340px; padding: 10px;
+        }
+        .anser-chat-messages {
+            flex: 1; overflow-y: auto; margin-bottom: 10px;
+            font-size: 0.82rem; display: flex;
+            flex-direction: column; gap: 10px;
+        }
+        .anser-msg {
+            max-width: 85%; padding: 8px 14px;
+            border-radius: 20px; line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .anser-msg.bot {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.08);
+            color: var(--text);
+            border: 1px solid var(--glass-border);
+            display: flex; gap: 8px; align-items: flex-start;
+        }
+        .anser-msg.user {
+            align-self: flex-end;
+            background: var(--accent); color: #fff;
+        }
+        .anser-chat-input-row { display: flex; gap: 8px; }
+        .anser-chat-input-row input {
+            flex: 1; padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.05);
+            color: var(--text); outline: none; font-size: 0.82rem;
+        }
+        .anser-chat-input-row input:focus { border-color: var(--accent); }
+        .anser-chat-send-btn {
+            width: 36px; height: 36px; border-radius: 50%;
+            border: 1px solid var(--glass-border);
+            background: var(--accent); color: #fff;
+            font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .anser-chat-send-btn:hover { background: #fff; color: var(--accent); }
+        .anser-chat-toggle-btn {
+            background: none; border: none;
+            color: var(--text2); font-size: 1.2rem;
+            cursor: pointer; padding: 0 4px;
+        }
+        .anser-chat-float-btn {
+            position: fixed; bottom: 24px; right: 24px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff; font-size: 2rem; cursor: pointer;
+            z-index: 100; display: none;
+            align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(240,160,96,0.4);
+            transition: transform 0.2s;
+        }
+        .anser-chat-float-btn:hover { transform: scale(1.1); }
+        .anser-chat-minimized ~ .anser-chat-float-btn { display: flex; }
     </style>
 </head>
 <body>
@@ -1180,43 +1271,47 @@
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-              
-            const wr = travelerState.weatherRate;
-
-            // 自然衰减（固定速率，不再受天气影响）
-            travelerState.hunger      = Math.max(0, travelerState.hunger      - hours * 5);
-            travelerState.mood        = Math.max(0, travelerState.mood        - hours * 2);
+            // 自然衰减（固定速率）
             travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
+            travelerState.mood        = Math.max(0,   travelerState.mood        - hours * 2);
+            travelerState.hunger      = Math.max(0,   travelerState.hunger      - hours * 5);
 
-            tempDecay *= wr.temp;
-            moodDecay *= wr.mood;
-            hungerDecay *= wr.hunger;
-
-            travelerState.temperature = Math.max(-30, travelerState.temperature - tempDecay);
-            travelerState.mood        = Math.max(0, travelerState.mood - moodDecay);
-            travelerState.hunger      = Math.max(0, travelerState.hunger - hungerDecay);
-
-            // 饱腹极低时额外扣血
+            // 饱腹过低额外扣血
             if (travelerState.hunger < 10) {
-                healthDecay = hours * 2 * wr.health;
-                travelerState.health = Math.max(0, travelerState.health - healthDecay);
+                travelerState.health = Math.max(0, travelerState.health - hours * 2);
             }
 
-            // 离线使用背包物品（只使用，不找破烂）
-            if (hours > 0.1) {
-                const usageCycles = Math.floor(hours * 2);
+            // 专注奖励（在线且今日专注 ≥120 分钟）
+            const todayStats = calcStats(getToday());
+            const todayFocus = todayStats.totalDurationToday;
+            const isOnline = elapsed < 600; // 10分钟内视为在线
+            if (todayFocus >= 120 && isOnline) {
+                travelerState.temperature = Math.min(10,  travelerState.temperature + hours * 0.6);
+                travelerState.mood        = Math.min(100, travelerState.mood        + hours * 1.6);
+                travelerState.hunger      = Math.min(100, travelerState.hunger      + hours * 3.2);
+                travelerState.health      = Math.min(100, travelerState.health      + hours * 0.8);
+            }
+
+            // 钳制数值
+            travelerState.temperature = clamp(travelerState.temperature, -30, 10);
+            travelerState.health      = clamp(travelerState.health,      0, 100);
+            travelerState.hunger      = clamp(travelerState.hunger,      0, 100);
+            travelerState.mood        = clamp(travelerState.mood,        0, 100);
+
+            // 离线使用背包物品
+            if (hours > 0.5) {
+                const usageCycles = Math.floor(hours);
                 for (let i = 0; i < usageCycles; i++) {
                     autoUseBackpackItem();
                     if (travelerState.backpack.length === 0) break;
                 }
             }
 
-                // 帐篷升级/降级（只在日期变化时检查）
+            // 帐篷升级/降级
             const todayStr = getToday();
             if (todayStr !== (travelerState.tentCheckedDate || '')) {
                 const currentStreak = calcStats().streak;
                 if (currentStreak < (travelerState.lastStreak || 0)) {
-                    // 连续天数减少 → 断卡
                     if ((travelerState.tentLevel || 0) > 0) {
                         const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                         travelerState.log.push(`${timeStr} 🏕️ 连续打卡中断，帐篷被风雪卷走了。`);
@@ -1224,7 +1319,6 @@
                         travelerState.tentLevel = 0;
                     }
                 } else if (currentStreak > (travelerState.lastStreak || 0)) {
-                    // 连续天数增加 → 检查升级
                     for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
                         if (currentStreak >= TENT_LEVELS[i].days && (travelerState.tentLevel || 0) < i + 1) {
                             travelerState.tentLevel = i + 1;
@@ -1244,8 +1338,10 @@
             const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
             const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
             const dMood = Math.abs(travelerState.mood - lastSavedTraveler.mood);
-            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3) markDirty();
-
+            const dTent = Math.abs(travelerState.tentLevel - lastSavedTraveler.tentLevel);
+            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3 || dTent >= 1) {
+                markDirty();
+            }
             travelerState.lastUpdate = nowSec;
         }
 
@@ -2351,6 +2447,7 @@
             forceSaveAll();
             initSnowfall(adventureState.weather); // 改为带参数
             initTabs();
+            initAnserChat();
                 // 主题切换按钮
             const themeBtn = document.getElementById('themeToggleBtn');
             if (themeBtn) {
@@ -2376,6 +2473,77 @@
             updateTravelerState(Date.now() / 1000);
             forceSaveAll();
         });
+        // ==================== 安瑟小猫聊天 ====================
+        const ANSER_API_URL = 'https://answerbook.umlla.workers.dev'; // 替换
+        const ANSER_TOKEN   = 'anser-cat-secret-2062';       // 替换
+
+        let chatMinimized = true;
+
+        function initAnserChat() {
+            const chatContainer = document.getElementById('anser-chat');
+            const chatMessages   = document.getElementById('anser-chat-messages');
+            const chatInput      = document.getElementById('anser-chat-input');
+            const sendBtn        = document.getElementById('anser-chat-send');
+            const toggleBtn      = document.getElementById('anser-chat-toggle');
+            const floatBtn       = document.getElementById('anser-chat-float');
+            const header         = document.getElementById('anser-chat-header');
+
+            function setMinimized(min) {
+                chatMinimized = min;
+                if (min) {
+                    chatContainer.classList.add('anser-chat-minimized');
+                } else {
+                    chatContainer.classList.remove('anser-chat-minimized');
+                }
+            }
+
+            toggleBtn.addEventListener('click', () => setMinimized(!chatMinimized));
+            floatBtn.addEventListener('click', () => setMinimized(false));
+            header.addEventListener('click', (e) => {
+                if (e.target === header || e.target.tagName === 'SPAN') setMinimized(!chatMinimized);
+            });
+
+            function addMessage(type, text) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `anser-msg ${type}`;
+                if (type === 'bot') {
+                    msgDiv.innerHTML = `<span class="cat-icon">🐱</span><span>${text}</span>`;
+                } else {
+                    msgDiv.textContent = text;
+                }
+                chatMessages.appendChild(msgDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            async function sendMessage() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+
+                addMessage('user', text);
+                chatInput.value = '';
+
+                try {
+                    const response = await fetch(ANSER_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: ANSER_TOKEN, message: text })
+                    });
+                    const data = await response.json();
+                    addMessage('bot', data.reply || '喵…本喵的爪子卡住了…');
+                } catch (err) {
+                    addMessage('bot', `喵…信号不好：${err.message}`);
+                }
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            setMinimized(true);
+        }
+
+        // 在 init() 函数中调用 initAnserChat()
     })();
 </script>
 <!-- ==================== 濒死梦境覆盖层 ==================== -->
@@ -2400,5 +2568,28 @@
         </div>
     </div>
 </div>
+<!-- 安瑟小猫聊天组件 -->
+<div id="anser-chat" class="anser-chat anser-chat-minimized">
+    <div class="anser-chat-header" id="anser-chat-header">
+        <div class="anser-cat-avatar">🐱</div>
+        <span>安瑟 · 小猫</span>
+        <button id="anser-chat-toggle" class="anser-chat-toggle-btn">─</button>
+    </div>
+    <div class="anser-chat-body">
+        <div class="anser-chat-messages" id="anser-chat-messages">
+            <div class="anser-msg bot">
+                <span class="cat-icon">🐱</span>
+                <span>喵～我是安瑟，一只在雪原上闲逛的 AI 小猫。有什么想问的吗？</span>
+            </div>
+        </div>
+        <div class="anser-chat-input-row">
+            <input type="text" id="anser-chat-input" placeholder="跟小猫说点什么..." autocomplete="off" />
+            <button id="anser-chat-send" class="anser-chat-send-btn">→</button>
+        </div>
+    </div>
+</div>
+
+<!-- 猫爪悬浮按钮（最小化时显示） -->
+<button id="anser-chat-float" class="anser-chat-float-btn">🐾</button>
 </body>
 </html>
