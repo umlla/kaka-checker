@@ -575,15 +575,14 @@
             transform: scale(0.9);
         }
         /* ========== 安瑟小猫聊天 ========== */
+        /* 安瑟聊天窗口 - 大气不透明 */
         .anser-chat {
             position: fixed; bottom: 90px; right: 24px;
             width: 330px; max-height: 460px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(var(--blur-amount));
-            -webkit-backdrop-filter: blur(var(--blur-amount));
-            border: 1px solid var(--glass-border);
+            background: #1a1e2a;               /* 深色不透明卡片 */
+            border: 1px solid #2a3040;
             border-radius: var(--radius);
-            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
             z-index: 99;
             display: flex; flex-direction: column;
             overflow: hidden;
@@ -591,67 +590,84 @@
         }
         .anser-chat-minimized .anser-chat-body { display: none; }
         .anser-chat-minimized { width: auto; max-height: none; }
+
+        /* 头部 */
         .anser-chat-header {
-            padding: 10px 14px; font-weight: 600;
-            color: var(--text); display: flex;
+            padding: 12px 16px; font-weight: 600;
+            color: #e0e8f0; display: flex;
             justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--glass-border);
-            background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid #2a3040;
+            background: #22283a;
             cursor: pointer;
         }
         .anser-cat-avatar {
-            width: 28px; height: 28px; border-radius: 50%;
+            width: 30px; height: 30px; border-radius: 50%;
             background: #f0c8a0; display: flex;
             align-items: center; justify-content: center;
             font-size: 1.2rem; margin-right: 8px;
         }
+        /* 消息区域 */
         .anser-chat-body {
             display: flex; flex-direction: column;
-            height: 340px; padding: 10px;
+            height: 340px; padding: 12px;
         }
         .anser-chat-messages {
-            flex: 1; overflow-y: auto; margin-bottom: 10px;
-            font-size: 0.82rem; display: flex;
+            flex: 1; overflow-y: auto; margin-bottom: 12px;
+            font-size: 0.85rem; display: flex;
             flex-direction: column; gap: 10px;
         }
         .anser-msg {
-            max-width: 85%; padding: 8px 14px;
+            max-width: 85%; padding: 10px 14px;
             border-radius: 20px; line-height: 1.5;
             word-wrap: break-word;
         }
+        /* 小猫消息 */
         .anser-msg.bot {
             align-self: flex-start;
-            background: rgba(255,255,255,0.08);
-            color: var(--text);
-            border: 1px solid var(--glass-border);
+            background: #252d3a;               /* 比背景稍亮 */
+            color: #d0d8e8;
+            border: 1px solid #3a4050;
             display: flex; gap: 8px; align-items: flex-start;
         }
+        /* 用户消息 */
         .anser-msg.user {
             align-self: flex-end;
-            background: var(--accent); color: #fff;
+            background: var(--accent, #f0a060);   /* 使用主题色，保留灵动感 */
+            color: #fff;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
+        /* 输入行 */
         .anser-chat-input-row { display: flex; gap: 8px; }
         .anser-chat-input-row input {
-            flex: 1; padding: 8px 14px;
+            flex: 1; padding: 10px 14px;
             border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            background: rgba(255,255,255,0.05);
-            color: var(--text); outline: none; font-size: 0.82rem;
+            border: 1px solid #3a4050;
+            background: #1e2430;
+            color: #e0e8f0; outline: none; font-size: 0.85rem;
+            transition: border-color 0.2s;
         }
-        .anser-chat-input-row input:focus { border-color: var(--accent); }
+        .anser-chat-input-row input:focus {
+            border-color: var(--accent, #f0a060);
+        }
+        /* 发送按钮 */
         .anser-chat-send-btn {
-            width: 36px; height: 36px; border-radius: 50%;
-            border: 1px solid var(--glass-border);
-            background: var(--accent); color: #fff;
+            width: 38px; height: 38px; border-radius: 50%;
+            border: none;
+            background: var(--accent, #f0a060); color: #fff;
             font-weight: bold; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s;
         }
-        .anser-chat-send-btn:hover { background: #fff; color: var(--accent); }
+        .anser-chat-send-btn:active { transform: scale(0.95); }
         .anser-chat-toggle-btn {
             background: none; border: none;
-            color: var(--text2); font-size: 1.2rem;
+            color: #8899aa; font-size: 1.2rem;
             cursor: pointer; padding: 0 4px;
         }
+        /* 滚动条微调 */
+        .anser-chat-messages::-webkit-scrollbar { width: 4px; }
+        .anser-chat-messages::-webkit-scrollbar-thumb { background: #3a4050; border-radius: 2px; }
         .anser-chat-float-btn {
             position: fixed; bottom: 24px; right: 24px;
             width: 56px; height: 56px; border-radius: 50%;
@@ -2595,14 +2611,14 @@
 <div id="anser-chat" class="anser-chat anser-chat-minimized">
     <div class="anser-chat-header" id="anser-chat-header">
         <div class="anser-cat-avatar">🐱</div>
-        <span>安瑟 · 小猫</span>
+        <span>一串可疑的脚印</span>
         <button id="anser-chat-toggle" class="anser-chat-toggle-btn">─</button>
     </div>
     <div class="anser-chat-body">
         <div class="anser-chat-messages" id="anser-chat-messages">
             <div class="anser-msg bot">
                 <span class="cat-icon">🐱</span>
-                <span>喵～我是安瑟，一只在雪原上闲逛的 AI 小猫。有什么想问的吗？</span>
+                <span>喵～被你发现啦！有什么想跟安瑟聊聊的吗？（输入“/kk”向答案之书提问）</span>
             </div>
         </div>
         <div class="anser-chat-input-row">
