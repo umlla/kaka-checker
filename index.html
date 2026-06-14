@@ -2478,6 +2478,15 @@
         const ANSER_TOKEN   = 'anser-cat-secret-2062';       // 替换
 
         let chatMinimized = true;
+        // 获取或创建持久用户 ID（存于 localStorage）
+        function getUserId() {
+            let userId = localStorage.getItem('anser_user_id');
+            if (!userId) {
+                userId = 'user-' + Math.random().toString(36).substring(2, 10);
+                localStorage.setItem('anser_user_id', userId);
+            }
+            return userId;
+        }
 
         function initAnserChat() {
             const chatContainer = document.getElementById('anser-chat');
