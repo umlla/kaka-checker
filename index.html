@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.15-3';
+        var v = '2025.06.15-2';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
@@ -597,8 +597,10 @@
             overflow: hidden;
             transition: opacity 0.25s, transform 0.25s;
         }
-        .anser-chat-minimized .anser-chat-body { display: none; }
-        .anser-chat-minimized { width: auto; max-height: none; }
+        /* 最小化时彻底隐藏聊天窗口，只留猫爪按钮 */
+        .anser-chat-minimized {
+            display: none !important;   /* 完全隐藏整个聊天窗口 */
+        }
 
         /* 头部 */
         .anser-chat-header {
@@ -683,13 +685,14 @@
             background: var(--accent);
             border: 2px solid rgba(255,255,255,0.3);
             color: #fff; font-size: 2rem; cursor: pointer;
-            z-index: 100; display: none;
+            z-index: 100;
+            display: flex;            /* 改为始终显示 */
             align-items: center; justify-content: center;
             box-shadow: 0 4px 20px rgba(240,160,96,0.4);
             transition: transform 0.2s;
         }
         .anser-chat-float-btn:hover { transform: scale(1.1); }
-        .anser-chat-minimized ~ .anser-chat-float-btn { display: flex; }
+        
     </style>
 </head>
 <body>
@@ -2540,8 +2543,10 @@
                 chatMinimized = min;
                 if (min) {
                     chatContainer.classList.add('anser-chat-minimized');
+                    floatBtn.style.display = 'flex';   // 显示猫爪
                 } else {
                     chatContainer.classList.remove('anser-chat-minimized');
+                    floatBtn.style.display = 'none';   // 隐藏猫爪
                 }
             }
 
@@ -2620,7 +2625,7 @@
 <div id="anser-chat" class="anser-chat anser-chat-minimized">
     <div class="anser-chat-header" id="anser-chat-header">
         <div class="anser-cat-avatar">🐱</div>
-        <span>一串可疑的脚印</span>
+        <span>小猫安瑟</span>
         <button id="anser-chat-toggle" class="anser-chat-toggle-btn">─</button>
     </div>
     <div class="anser-chat-body">
