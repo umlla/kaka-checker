@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.16-1';
+        var v = '2025.06.15-2';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
         }
     })();
     </script>
-    <title>卡卡查克 · 雪原冒险</title>
+    <title>卡卡查克 · 雪原冒险日志</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
     <style>
         :root {
@@ -575,9 +575,6 @@
         }
         .theme-toggle-btn:hover {
             transform: scale(1.15) rotate(15deg);
-        }
-        .theme-toggle-btn:hover {
-            transform: scale(1.15) rotate(15deg);
             box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
         }
         .theme-toggle-btn:active {
@@ -704,8 +701,8 @@
 </button>
 <div class="app-container">
     <div class="header">
-        <h1>❄️ 卡卡查克 · 雪原冒险</h1>
-        <p class="subtitle">🏔️ 在冰原上留下你的足迹，与旅行者一同前行</p>
+        <h1>❄️ 卡卡查克 · 雪原冒险日志</h1>
+        <p class="subtitle" id="headerSubtitle" style="font-size:0.85rem;color:var(--text2);transition:var(--transition);">🏔️ 风雪中的每一步，都是活着的证明。</p>
     </div>
 
     <div class="main-layout">
@@ -868,17 +865,18 @@
 
         
         // 天气衰减速率调整（乘数，1为正常，>1衰减更快，<1衰减更慢）
+        // 每条 scene 是沉浸式场景描述，用于冒险面板和安瑟联动
         const WEATHER_RATES = {
-            "暴风雪": { temp: 1.4, mood: 1.1, health: 1.0, hunger: 1.2, desc: "暴风雪肆虐，温度下降速度加快40%，体力消耗更快。" },
-            "晴朗":   { temp: 0.7, mood: 0.8, health: 1.0, hunger: 0.9, desc: "天空晴朗，温度下降减缓30%，心情保持良好。" },
-            "极夜":   { temp: 1.2, mood: 1.3, health: 1.0, hunger: 1.0, desc: "漫长的极夜让人心情沉重，心情下降加快30%。" },
-            "雾凇":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, desc: "雾凇挂在枝头，景色静谧，所有衰减略微减缓。" },
-            "冰雹":   { temp: 1.3, health: 1.1, mood: 1.0, hunger: 1.1, desc: "冰雹砸下，温度下降加快30%，健康略有额外损耗。" },
-            "小雪":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, desc: "小雪纷纷，温度下降减缓10%，心情平静。" },
-            "极光":   { mood: 0.6, temp: 0.9, health: 1.0, hunger: 1.0, desc: "极光在头顶舞动，心情大幅改善，衰减速度降低40%。" },
-            "冻雨":   { temp: 1.3, health: 1.1, mood: 1.1, hunger: 1.1, desc: "冻雨刺骨，温度与健康衰减加快。" },
-            "白化天": { temp: 1.0, mood: 1.2, health: 1.0, hunger: 1.0, desc: "白茫茫一片，方向感丧失，心情下降加快20%。" },
-            "钻石尘": { temp: 0.8, mood: 0.8, health: 1.0, hunger: 1.0, desc: "细小的冰晶在空中闪烁，温度与心情衰减减缓。" }
+            "暴风雪": { temp: 1.4, mood: 1.1, health: 1.0, hunger: 1.2, scene: "狂风裹着雪粒抽打着脸颊，每一步都像踩进冰窟窿。天地之间只剩下呼啸声，你弓着腰、眯着眼，在白色的混沌中艰难前行。" },
+            "晴朗":   { temp: 0.7, mood: 0.8, health: 1.0, hunger: 0.9, scene: "阳光洒在无垠的雪原上，每一片冰晶都在闪闪发光。远处的地平线清晰得像刀切的一样，你眯起眼睛望向远方，心里莫名地踏实。" },
+            "极夜":   { temp: 1.2, mood: 1.3, health: 1.0, hunger: 1.0, scene: "黑暗笼罩了一切，只有头顶的星光微弱地勾勒出雪地的轮廓。你不知道现在是白天还是深夜，时间仿佛在这里失去了意义。" },
+            "雾凇":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, scene: "树枝和枯草都裹上了一层晶莹的冰壳，整个世界安静得像一幅画。你忍不住放轻了脚步——这么美的景色，不该被打扰。" },
+            "冰雹":   { temp: 1.3, health: 1.1, mood: 1.0, hunger: 1.1, scene: "指头大的冰雹噼里啪啦砸下来，你只能把背包举过头顶一路小跑。一颗砸在肩膀上，疼得你龇牙咧嘴。" },
+            "小雪":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, scene: "细密的雪花缓缓飘落，像天空在撒白糖。世界变得柔软而安静，连呼吸都慢了下来。" },
+            "极光":   { mood: 0.6, temp: 0.9, health: 1.0, hunger: 1.0, scene: "绿色的光幕在头顶缓缓舞动，像天神打翻了调色盘。你仰头看了很久，几乎忘记了寒冷——这一刻，雪原值得了。" },
+            "冻雨":   { temp: 1.3, health: 1.1, mood: 1.1, hunger: 1.1, scene: "雨滴落在衣服上立刻结冰，你感觉自己正在慢慢地被一层冰壳包裹。每走一步，冰碴子都在嘎吱作响。冷到骨头里了。" },
+            "白化天": { temp: 1.0, mood: 1.2, health: 1.0, hunger: 1.0, scene: "四周全是白茫茫的一片，天和地连在了一起没有界线。你分不清哪里是雪、哪里是天空，只能凭着感觉深一脚浅一脚地往前走。" },
+            "钻石尘": { temp: 0.8, mood: 0.8, health: 1.0, hunger: 1.0, scene: "细小的冰晶悬浮在空气中，像无数颗钻石在阳光下闪烁。你伸出手接住一颗，它在掌心瞬间化成了水——凉丝丝的。" }
         };
 
         const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
@@ -1009,6 +1007,15 @@
         function randInt(max) { return Math.floor(Math.random()*max); }
         function randChoice(arr) { return arr[randInt(arr.length)]; }
         function clamp(v,lo,hi) { return Math.max(lo, Math.min(hi, v)); }
+        // 统一格式化当前时刻（ Asia/Shanghai ），用于日志时间戳
+        function nowTimeStr() {
+            return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+        }
+        // 将一条日志压入旅行者日志，并保持长度不超过 10
+        function pushTravelerLog(entry) {
+            travelerState.log.push(entry);
+            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+        }
 
         const LS_KEYS = { userData:'kaka_user_data', traveler:'kaka_traveler_state', adventure:'kaka_adventure_state' };
         function loadJSON(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch(e) { return fallback; } }
@@ -1042,10 +1049,8 @@
                 }
                 if (highestLevel > 0 && travelerState.tentLevel < highestLevel) {
                     travelerState.tentLevel = highestLevel;
-                    const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                     const tentInfo = TENT_LEVELS[highestLevel - 1];
-                    travelerState.log.push(`${timeStr} ⛺ 你之前的努力没有白费——${tentInfo.log}`);
-                    if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                    pushTravelerLog(`${nowTimeStr()} ⛺ 你之前的努力没有白费——${tentInfo.log}`);
                     forceSaveAll();
                 }
             }
@@ -1101,9 +1106,7 @@
             // 恢复旅行者状态
             travelerState.health = clamp(travelerState.health + 25, 0, 100);
             travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
-            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-            travelerState.log.push(`${timeStr} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
-            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+            pushTravelerLog(`${nowTimeStr()} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
             // 解锁梦境回响主题
             unlockTheme('dreamecho');
             forceSaveAll();
@@ -1313,10 +1316,28 @@
             const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
             if (hours <= 0) return;
 
-            // 自然衰减（固定速率）
-            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1);
-            travelerState.mood        = Math.max(0,   travelerState.mood        - hours * 2);
-            travelerState.hunger      = Math.max(0,   travelerState.hunger      - hours * 5);
+            // 帐篷减免比例
+            const tentReduction = (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length)
+                ? TENT_LEVELS[travelerState.tentLevel - 1].reduction
+                : 0;
+
+            // 天气衰减倍率
+            const weatherName = adventureState.weather || '晴朗';
+            const wRate = WEATHER_RATES[weatherName] || { temp: 1, mood: 1, health: 1, hunger: 1 };
+            const wr = {
+                temp: wRate.temp ?? 1,
+                mood: wRate.mood ?? 1,
+                health: wRate.health ?? 1,
+                hunger: wRate.hunger ?? 1
+            };
+
+            // 自然衰减（应用帐篷减免 + 天气倍率）
+            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1 * (1 - tentReduction) * wr.temp);
+            travelerState.mood        = Math.max(0,   travelerState.mood        - hours * 2 * (1 - tentReduction * 0.5) * wr.mood);
+            travelerState.hunger      = Math.max(0,   travelerState.hunger      - hours * 5 * (1 - tentReduction * 0.3) * wr.hunger);
+
+            // 帐篷对健康有间接保护
+            travelerState.health = Math.max(0, travelerState.health - hours * (tentReduction >= 0.8 ? 0.3 : tentReduction >= 0.4 ? 0.6 : 1.0) * wr.health);
 
             // 饱腹过低额外扣血
             if (travelerState.hunger < 10) {
@@ -1353,23 +1374,24 @@
             const todayStr = getToday();
             if (todayStr !== (travelerState.tentCheckedDate || '')) {
                 const currentStreak = calcStats().streak;
-                if (currentStreak < (travelerState.lastStreak || 0)) {
-                    if ((travelerState.tentLevel || 0) > 0) {
-                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                        travelerState.log.push(`${timeStr} 🏕️ 连续打卡中断，帐篷被风雪卷走了。`);
-                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                        travelerState.tentLevel = 0;
+                // 根据当前连续天数重新计算帐篷等级（支持平滑升降）
+                let newLevel = 0;
+                for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
+                    if (currentStreak >= TENT_LEVELS[i].days) {
+                        newLevel = i + 1;
+                        break;
                     }
-                } else if (currentStreak > (travelerState.lastStreak || 0)) {
-                    for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
-                        if (currentStreak >= TENT_LEVELS[i].days && (travelerState.tentLevel || 0) < i + 1) {
-                            travelerState.tentLevel = i + 1;
-                            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                            travelerState.log.push(`${timeStr} ⛺ ${TENT_LEVELS[i].log}`);
-                            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
-                            break;
-                        }
-                    }
+                }
+                const oldLevel = travelerState.tentLevel || 0;
+                if (newLevel > oldLevel) {
+                    travelerState.tentLevel = newLevel;
+                    pushTravelerLog(`${nowTimeStr()} ⛺ ${TENT_LEVELS[newLevel - 1].log}`);
+                } else if (newLevel < oldLevel && newLevel === 0) {
+                    travelerState.tentLevel = 0;
+                    pushTravelerLog(`${nowTimeStr()} 🏕️ 连续天数减少，帐篷已被风雪摧毁。`);
+                } else if (newLevel < oldLevel) {
+                    travelerState.tentLevel = newLevel;
+                    pushTravelerLog(`${nowTimeStr()} 🏕️ 连续天数减少，帐篷降级至「${TENT_LEVELS[newLevel - 1].name}」。`);
                 }
                 travelerState.lastStreak = currentStreak;
                 travelerState.tentCheckedDate = todayStr;
@@ -1442,9 +1464,7 @@
                                 });
                             }
                             const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
-                            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
-                            travelerState.log.push(`${timeStr} ${useText}（剩余耐久：${newDurability}）`);
-                            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                            pushTravelerLog(`${nowTimeStr()} ${useText}（剩余耐久：${newDurability}）`);
                             if (newDurability <= 0) {
                                 bp.splice(idx, 1);
                             } else {
@@ -1458,10 +1478,8 @@
                     // 一次性物品处理
                     else {
                         if (effect) applyEffect(effect);
-                        const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
                         const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
-                        travelerState.log.push(`${timeStr} ${useText}`);
-                        if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+                        pushTravelerLog(`${nowTimeStr()} ${useText}`);
                         bp.splice(idx, 1);
                         return useText;
                     }
@@ -1505,18 +1523,17 @@
             }
 
             // 记录日志
-            const timeStr = new Date(nowSec * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+            const timeStr = nowTimeStr();
             if (isExtreme) {
                 // 极端状态：只记录通用文本，不显示具体效果
-                travelerState.log.push(`${timeStr} ⚠️旅行者陷入了绝境，正在艰难挣扎。`);
+                pushTravelerLog(`${timeStr} ⚠️旅行者陷入了绝境，正在艰难挣扎。`);
             } else {
                 // 普通事件：正常显示效果数值
                 const effectStr = formatEffects(eventObj.effects);
                 if (effectStr) {
-                    travelerState.log.push(`${timeStr} 事件：${effectStr}`);
+                    pushTravelerLog(`${timeStr} 事件：${effectStr}`);
                 }
             }
-            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
 
            // 天气变化更新飘雪
             const newWeather = randChoice(WEATHERS);
@@ -1771,6 +1788,7 @@
             if (!tomatoState.intervalId) {
                 tomatoState.intervalId = setInterval(tickTomato, 1000);
             }
+            scheduleTomatoCompletion();
             updateTomatoUI();
         }
 
@@ -1787,6 +1805,7 @@
                 tomatoState.status = 'paused';
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
+                clearTomatoCompletion();
                 updateTomatoUI();
             }
         }
@@ -1865,6 +1884,7 @@
                 clearInterval(tomatoState.intervalId);
                 tomatoState.intervalId = null;
             }
+            clearTomatoCompletion();
             tomatoState.status = 'idle';
             tomatoState.elapsedFocusSeconds = 0;
             tomatoState.remainingSeconds = tomatoState.totalSeconds;
@@ -1889,6 +1909,32 @@
                 tomatoState.remainingSeconds = remaining;
             }
             updateTomatoUI();
+        }
+
+        // ---- 后台/可见性补偿 ----
+        // 记录一次性"到点完成"定时器（后台比逐秒 setInterval 更可靠触发）
+        let tomatoCompletionTimer = null;
+        function scheduleTomatoCompletion() {
+            clearTimeout(tomatoCompletionTimer);
+            tomatoCompletionTimer = null;
+            // 仅倒计时运行时需要到点完成
+            if (tomatoState.status !== 'running' || tomatoState.mode !== 'countdown') return;
+            const endMs = tomatoState.startTime + tomatoState.totalSeconds * 1000;
+            const delay = endMs - Date.now();
+            if (delay <= 0) return; // 已到点，交给 tickTomato 处理
+            tomatoCompletionTimer = setTimeout(() => {
+                if (tomatoState.status === 'running') tickTomato();
+            }, delay + 50);
+        }
+        function clearTomatoCompletion() {
+            if (tomatoCompletionTimer) {
+                clearTimeout(tomatoCompletionTimer);
+                tomatoCompletionTimer = null;
+            }
+        }
+        // 回到页面时，按真实已过时间立即校正/完成（避免只在切回时才结束）
+        function reconcileTomato() {
+            if (tomatoState.status === 'running') tickTomato();
         }
 
         function setTomatoPreset(minutes) {
@@ -1988,6 +2034,8 @@
 
         // ==================== UI 渲染 ====================
         function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function getWeatherScene(w) { const r = WEATHER_RATES[w]; return r ? r.scene : '天气状况未知，你小心地观察着四周。'; }
+        function getWeatherDesc(w) { return getWeatherScene(w); } // 向后兼容
 
         function updateTravelerBar() {
             migrateSaveData();
@@ -2001,20 +2049,56 @@
             document.getElementById('healthBar').style.width = t.health + '%';
             document.getElementById('hungerBar').style.width = t.hunger + '%';
             document.getElementById('moodBar').style.width = t.mood + '%';
-            document.getElementById('weatherTag').textContent = '☁️ ' + adventureState.weather;
+            // 动态副标题：根据天气 + 时段变化
+            const hour = new Date().getHours();
+            const timeOfDay = hour < 6 ? '凌晨' : hour < 9 ? '清晨' : hour < 12 ? '上午' : hour < 14 ? '正午' : hour < 18 ? '下午' : hour < 22 ? '傍晚' : '深夜';
+            const weatherSub = adventureState.weather || '晴朗';
+            const subEl = document.getElementById('headerSubtitle');
+            const subTexts = {
+                '暴风雪': `🌪️ ${timeOfDay}的暴风雪像一头愤怒的巨兽，你只能弓着腰往前挪。`,
+                '晴朗':   `☀️ ${timeOfDay}的雪原格外明亮，阳光照在雪地上晃得人睁不开眼。`,
+                '极夜':   `🌌 现在是${timeOfDay}，但天永远是黑的——只有遥远星光陪着你。`,
+                '雾凇':   `🌿 ${timeOfDay}的雾凇像冰晶做的森林，你放轻了脚步，生怕惊扰这份宁静。`,
+                '冰雹':   `💥 ${timeOfDay}的冰雹砸得背包噼啪响，你只能抱着头一路小跑。`,
+                '小雪':   `❄️ ${timeOfDay}的小雪像柳絮一样飘着，世界安静得只剩自己的呼吸声。`,
+                '极光':   `🌈 ${timeOfDay}的极光在头顶流淌，你仰头看了好一会儿，几乎忘了赶路。`,
+                '冻雨':   `🥶 ${timeOfDay}的冻雨渗进衣领，你缩着脖子加快了脚步——冷得太真实了。`,
+                '白化天': `🌫️ ${timeOfDay}的白化天让你看不清三米外的路，只能凭着感觉深一脚浅一脚地走。`,
+                '钻石尘': `✨ ${timeOfDay}的钻石尘在阳光中闪烁，像是星星落在了人间。`
+            };
+            if (subEl && subTexts[weatherSub]) {
+                subEl.textContent = subTexts[weatherSub];
+            }
+
+            // 天气场景描述（含帐篷联动效果提示）
+            const weatherName = adventureState.weather || '晴朗';
+            const wRate = WEATHER_RATES[weatherName] || {};
+            const wScene = wRate.scene || '天空灰蒙蒙的，看不清远处的景象。';
+            const tentLevel = travelerState.tentLevel || 0;
+            const tentReduction = (tentLevel > 0 && tentLevel <= TENT_LEVELS.length) ? TENT_LEVELS[tentLevel - 1].reduction : 0;
+            const weatherEl = document.getElementById('weatherTag');
+            weatherEl.textContent = '☁️ ' + weatherName;
+            weatherEl.title = wScene
+                + (tentReduction > 0 ? '\n\n🏕️ ' + TENT_DISPLAY_NAMES[tentLevel] + ' 减免了 ' + Math.round(tentReduction * 100) + '% 的温度衰减。' : '');
+
             // 在 updateTravelerBar 的末尾，加入以下代码（放在 } 之前）
             if (travelerState.health <= 5 && !dreamTriggered) {
                 showDream();
             }
-                // 更新帐篷图标与名称
+                // 更新帐篷图标与名称 + 悬停提示
             const tentTag = document.getElementById('tentTag');
             if (tentTag) {
                 const level = travelerState.tentLevel || 0;
                 if (level > 0 && level < TENT_ICONS.length) {
                     tentTag.style.display = 'inline-block';
+                    const info = TENT_LEVELS[level - 1];
+                    const pct = Math.round(info.reduction * 100);
                     tentTag.textContent = TENT_ICONS[level] + ' ' + TENT_DISPLAY_NAMES[level];
+                    tentTag.title = `🏕️ ${TENT_DISPLAY_NAMES[level]}\n「${TENT_LEVELS[level - 1].log}」\n\n🌡️ 温度衰减 -${pct}%\n😊 心情衰减 -${Math.round(pct * 0.5)}%\n🍞 饱腹衰减 -${Math.round(pct * 0.3)}%\n❤️ 健康损耗降低\n\n📅 连续打卡 ${TENT_LEVELS[level - 1].days} 天解锁`;
                 } else {
-                    tentTag.style.display = 'none';
+                    tentTag.style.display = 'inline-block';
+                    tentTag.textContent = '🏕️ 无帐篷';
+                    tentTag.title = '每天打卡可升级帐篷，抵御风雪！';
                 }
             }
         }
@@ -2055,18 +2139,16 @@
             // 在 renderCheckinPanel 函数内，构建掉落日志的 HTML 变量
             let dropLogHtml = '';
             if (currentTomatoDrops.length > 0) {
-                dropLogHtml = '<div class="tomato-drop-area" style="display:block; margin-top:8px; border-top:1px solid var(--border); padding-top:6px;">';
-                dropLogHtml += '<div class="drop-header" style="font-size:0.7rem;color:#94a3b8;">📦 本次掉落</div>';
-                dropLogHtml += '<ul class="drop-list" style="list-style:none; padding:0; margin:4px 0 0 0; max-height:80px; overflow-y:auto;">';
+                dropLogHtml = '<div class="tomato-drop-area"><div class="drop-header" style="font-size:0.7rem;color:#94a3b8;">📦 本次掉落</div><ul class="drop-list">';
                 for (const drop of currentTomatoDrops) {
-                    dropLogHtml += `<li style="padding:2px 0; border-bottom:1px solid #1a2a3a; font-size:0.68rem;">· ${drop.rarity} · ${drop.name}</li>`;
+                    dropLogHtml += `<li>· ${drop.rarity} · ${drop.name}</li>`;
                 }
                 dropLogHtml += '</ul></div>';
             }
             // 滚动区域内容
             const scrollContent = todayCheckins.length > 0
                 ? `<ul class="checkin-list">${listHtml}</ul>`
-                : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem;">📭 今天还没有打卡记录，快来打卡吧！</div>`;
+                : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem;padding:0 20px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:8px;">📭</div><div>风声呜咽，雪花在帐篷外打着旋。</div><div style="margin-top:4px;font-size:0.8rem;color:#64748b;">今天还没有留下任何足迹……</div><div style="margin-top:6px;font-size:0.75rem;color:#475569;">输入任务名称，开始你的第一次打卡吧。</div></div>`;
             
 
             return `
@@ -2156,14 +2238,16 @@
             <div class="panel">
                 <h3><span class="icon">🗺️</span> 雪原冒险报告</h3>
                 <div class="adventure-meta">
-                    <span class="weather-tag">☁️ ${escHtml(report.weather)}</span>
+                    <span class="weather-tag" title="${escHtml(getWeatherScene(report.weather))}">☁️ ${escHtml(report.weather)}</span>
                     <span>🕒 更新：${updateTime}</span>
                     <span>⏳ 刷新倒计时：约 ${remaining} 分钟</span>
                 </div>
+                <div style="font-size:0.75rem;color:var(--text2);margin:-4px 0 8px 0;font-style:italic;line-height:1.5;">“${escHtml(getWeatherScene(report.weather))}”</div>
                 <div class="adventure-event">🚶 ${escHtml(report.event)}</div>
                 <div style="margin-top:8px;font-size:0.85rem;color:var(--text);">
-                    🌡️ 温度:<b>${Math.round(t.temperature)}°C</b> | ❤️ 健康:<b>${Math.round(t.health)}</b> | 🍞 饱腹:<b>${Math.round(t.hunger)}</b> | 😊 心情:<b>${Math.round(t.mood)}</b>
-                    ${statusText ? '<br><span style="color:var(--text2);">' + statusText + '</span>' : ''}
+                    🌡️ 温度:<b>${Math.round(t.temperature)}°C</b> · ❤️ 健康:<b>${Math.round(t.health)}</b> · 🍞 饱腹:<b>${Math.round(t.hunger)}</b> · 😊 心情:<b>${Math.round(t.mood)}</b>
+                    ${(t.tentLevel || 0) > 0 ? '<br>🏕️ ' + TENT_DISPLAY_NAMES[t.tentLevel] + '（减免 ' + Math.round(TENT_LEVELS[t.tentLevel - 1].reduction * 100) + '% 温度衰减）' : '<br>🏕️ 无帐篷，风雪无阻'}
+                    ${statusText ? '<br><span style="color:var(--text2);letter-spacing:0.02em;">' + statusText + '</span>' : ''}
                 </div>
                 <div style="margin-top:6px;">
                     <span style="font-size:0.8rem;color:var(--text2);">🎒 旅行者背包（${t.backpack.length}/10）：</span>${bpHtml}
@@ -2174,7 +2258,7 @@
 
         function renderCardsPanel() {
             const cards = userData.cards.filter(c => c[2] > 0);
-            if (!cards.length) return '<div class="panel"><h3>🎒 我的背包</h3><p style="color:#94a3b8;">背包里空空如也～专注学习或完成番茄钟来获得物品吧！</p></div>';
+            if (!cards.length) return '<div class="panel" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 20px;"><h3 style="width:100%;">🎒 我的背包</h3><div style="font-size:3rem;margin:10px 0;">🎒</div><div style="color:var(--text2);font-size:0.85rem;">背包随风晃动，轻飘飘的——里面什么也没有。</div><div style="color:#64748b;font-size:0.75rem;margin-top:4px;">专注学习或完成一个番茄钟，也许能捡到有用的东西。</div><div style="color:#475569;font-size:0.7rem;margin-top:8px;font-style:italic;">荒野里总有好东西等着被发现，只要你不停下脚步。</div></div>';
 
             let gridHtml = '';
             for (const [name, desc, cnt] of cards) {
@@ -2449,6 +2533,21 @@
             });
         }
 
+        function initVisibilityHandlers() {
+            // 切换标签页时：倒计时模式下确保有到点完成定时器；回到页面时按真实时间校正
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // 即将进入后台：调度一次性到点完成（后台也可能触发）
+                    if (tomatoState.status === 'running') scheduleTomatoCompletion();
+                } else {
+                    // 回到页面：按真实已过时间立即推进/完成，防止只在切回时才结束
+                    reconcileTomato();
+                }
+            });
+            // 窗口重新聚焦（某些场景 visibilitychange 不触发）
+            window.addEventListener('focus', reconcileTomato);
+        }
+
         function startTickers() {
             setInterval(updateTravelerBar, TICK_INTERVAL_MS);
             setInterval(() => {
@@ -2503,6 +2602,7 @@
             // 将关键函数暴露给内联事件（备用）
             window.handleDreamSleep = handleDreamSleep;
             window.hideDream = hideDream;
+            initVisibilityHandlers();
             startTickers();
             renderPanel('checkin');
             updateTravelerBar();
@@ -2568,6 +2668,29 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
+            // 获取当前游戏上下文，让安瑟感知天气、帐篷和旅行者状态
+            function getGameContext() {
+                const t = travelerState;
+                const w = adventureState.weather || '晴朗';
+                const wInfo = WEATHER_RATES[w] || {};
+                const tentLvl = t.tentLevel || 0;
+                const tentName = tentLvl > 0 ? TENT_DISPLAY_NAMES[tentLvl] : '无帐篷';
+                const tentLog = tentLvl > 0 ? TENT_LEVELS[tentLvl - 1].log : '';
+                const statusParts = [];
+                if (t.temperature <= -20) statusParts.push('快冻僵了');
+                else if (t.temperature <= -10) statusParts.push('冷得发抖');
+                else if (t.temperature >= 0) statusParts.push('还挺暖和');
+                if (t.health <= 15) statusParts.push('生命垂危');
+                else if (t.health <= 40) statusParts.push('浑身难受');
+                if (t.hunger <= 15) statusParts.push('饿得头晕');
+                else if (t.hunger <= 40) statusParts.push('肚子在叫');
+                if (t.mood <= 15) statusParts.push('情绪低落');
+                else if (t.mood >= 70) statusParts.push('心情不错');
+                const statusLine = statusParts.length ? '，' + statusParts.join('，') : '，状态一般';
+                const sceneDesc = wInfo.scene || '';
+                return `你是住在雪原冒险网页里的一只小猫助手。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。请以小猫安瑟的语气喵喵地回答。`;
+            }
+
             async function sendMessage() {
                 const text = chatInput.value.trim();
                 if (!text) return;
@@ -2579,7 +2702,11 @@
                     const response = await fetch(ANSER_API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ token: ANSER_TOKEN, message: text })
+                        body: JSON.stringify({
+                            token: ANSER_TOKEN,
+                            message: text,
+                            context: getGameContext()
+                        })
                     });
                     const data = await response.json();
                     addMessage('bot', data.reply || '喵…本喵的爪子卡住了…');
@@ -2632,7 +2759,7 @@
         <div class="anser-chat-messages" id="anser-chat-messages">
             <div class="anser-msg bot">
                 <span class="cat-icon">🐱</span>
-                <span>喵～被你发现啦！有什么想跟安瑟聊聊的吗？（输入“/kk”向答案之书提问）</span>
+                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（输入“/kk”向答案之书提问）</span>
             </div>
         </div>
         <div class="anser-chat-input-row">
