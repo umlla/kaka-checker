@@ -1,0 +1,2775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    (function() {
+        var v = '2025.06.15-2';
+        if (localStorage.getItem('ka_ver') !== v) {
+        localStorage.setItem('ka_ver', v);
+        location.reload(true);
+        }
+    })();
+    </script>
+    <title>卡卡查克 · 雪原冒险日志</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
+    <style>
+        :root {
+            --bg-color: #0a0e17;
+            --bg-gradient: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
+            --text: #d0d8e8;
+            --text2: #94a3b8;
+            --accent: #5eb0e5;
+            --gold: #f0c060;
+            --rare: #7eb8da;
+            --legend: #f0b830;
+            --success: #5cb878;
+            --warm: #e89050;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px #00000055;
+            --transition: 0.25s ease;
+            
+            /* 磨砂面板变量（纯半透明，无模糊） */
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+        }
+
+        .snowfall { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+        .snowflake { position: absolute; top: -60px; color: #c8ddf8; font-size: 1rem; animation: fall linear infinite; opacity: 0.7; text-shadow: 0 0 6px #b0d0f8; }
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            100% { transform: translateY(105vh) rotate(360deg) translateX(-15px); opacity: 0.15; }
+        }
+
+        .app-container { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+        .header { text-align: center; padding: 18px 10px 8px; z-index: 2; }
+        .header h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #d0e8ff, #7eb8da); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 2px; }
+        .header .subtitle { font-size: 0.85rem; color: var(--text2); }
+
+        .btn { padding: 9px 18px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 0.88rem; border: none; transition: var(--transition); letter-spacing: 0.03em; white-space: nowrap; }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 10px #3a7bd544; }
+        .btn-primary:hover { background: #6ec0f0; box-shadow: 0 4px 16px #3a7bd566; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--accent); color: #fff; }
+        .btn-sm { padding: 5px 12px; font-size: 0.78rem; border-radius: 16px; }
+        .btn-gold { background: linear-gradient(135deg, #c89030, #e0b050); color: #1a0e00; font-weight: 700; box-shadow: 0 2px 12px #e0b04044; }
+        .btn-gold:hover { box-shadow: 0 4px 20px #e0b04066; }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+
+        .main-layout { display: flex; align-items: flex-start; gap: 16px; z-index: 2; margin-top: 8px; }
+        .sidebar { width: 150px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; z-index: 2; }
+
+        .traveler-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            align-items: center;
+            justify-content: flex-start;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 8px 10px;
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            margin: 0;
+        }
+        .traveler-bar .stat { display: flex; align-items: center; gap: 3px; font-size: 0.75rem; white-space: nowrap; }
+        .traveler-bar .stat .icon { font-size: 1.0rem; }
+        .traveler-bar .stat .val { font-weight: 600; min-width: 24px; text-align: center; }
+        .stat-bar-wrap {
+            width: 36px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+        .fill-temp { background: linear-gradient(90deg, #4a90d9, #e89050); }
+        .fill-health { background: linear-gradient(90deg, #e05555, #5cb878); }
+        .fill-hunger { background: linear-gradient(90deg, #c09040, #f0c060); }
+        .fill-mood { background: linear-gradient(90deg, #7eb8da, #d0a0e0); }
+
+        .tab-nav { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .tab-btn {
+            justify-content: flex-start;
+            padding: 9px 12px;
+            width: 100%;
+            text-align: left;
+            font-size: 0.82rem;
+            border-radius: 22px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            background: var(--glass-bg);
+            
+
+            color: var(--text2);
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        .tab-btn:hover {
+            border-color: var(--glass-border);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text);
+        }
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 12px #3a7bd544;
+        }
+        .panel-area {
+            flex: 1;
+            height: 560px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 4px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: var(--glass-shadow), var(--glass-highlight);
+            min-width: 0;
+        }
+
+        .panel { padding: 18px 20px; animation: fadeIn 0.35s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .panel h3 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .panel h3 .icon { font-size: 1.2rem; }
+
+        .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+        .input-row input {
+            padding: 9px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text);
+            font-size: 0.9rem;
+            outline: none;
+            transition: var(--transition);
+            flex: 1;
+            min-width: 120px;
+        }
+        .input-row input:focus { border-color: var(--accent); box-shadow: 0 0 8px #3a7bd533; }
+        .input-row input.dur-input { flex: 0 0 90px; min-width: 70px; }
+
+        .checkin-list { list-style: none; padding-right: 4px; }
+        .checkin-list li {
+            padding: 7px 0;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkin-list .task-name { color: var(--text); flex: 1; }
+        .checkin-list .task-dur { color: var(--accent); font-weight: 600; white-space: nowrap; }
+        .checkin-list .task-time { color: var(--text2); font-size: 0.75rem; white-space: nowrap; }
+
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; padding-right: 4px; }
+        .card-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: default;
+            transition: var(--transition);
+            position: relative;
+        }
+        .card-item:hover { border-color: #4a6a90; box-shadow: 0 2px 12px #00000044; }
+        .card-item.rare { border-color: #3a6a90; box-shadow: 0 0 10px #3a7bd522; }
+        .card-item.legend { border-color: #8a6a20; box-shadow: 0 0 16px #e0b04033; background: #141008; }
+        .card-item .card-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+        .card-item.rare .card-name { color: #8ec8f0; }
+        .card-item.legend .card-name { color: #f0c040; }
+        .card-item .card-desc { font-size: 0.75rem; color: var(--text2); line-height: 1.35; margin-bottom: 8px; }
+        .card-item .card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .card-count { display: inline-block; background: #5eb0e533; color: #b0d8f8; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 4px; }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .badge-common { background: #2a3a50; color: #a0b0c0; }
+        .badge-rare { background: #1a3a50; color: #7eb8da; }
+        .badge-legend { background: #3a2a10; color: #f0c040; }
+
+        .adventure-event {
+            background: var(--glass-bg);
+            border-left: 3px solid var(--accent);
+            padding: 14px 16px;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin: 10px 0;
+            line-height: 1.6;
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+        .adventure-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--text2); }
+
+        .backpack-list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
+        .backpack-list li {
+            background: var(--glass-bg);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            color: var(--text2);
+            border: 1px solid var(--glass-border);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(30, 40, 50, 0.85);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            animation: toastIn 0.35s ease, toastOut 0.4s ease 2.5s forwards;
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(-30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(-20px); } }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a3a50; border-radius: 2px; }
+
+        .tomato-display { font-size: 2.4rem; font-weight: 700; text-align: center; color: #f0c040; margin: 8px 0; font-variant-numeric: tabular-nums; }
+        .tomato-preset { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .tomato-preset .btn { font-size: 0.75rem; padding: 4px 10px; }
+        .tomato-custom {
+            padding: 4px 6px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text);
+            font-size: 0.75rem;
+            width: 70px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout { flex-direction: column; gap: 12px; }
+            .sidebar { width: 100%; flex-direction: column; gap: 10px; }
+            .traveler-bar { width: 100%; justify-content: space-around; padding: 10px 8px; }
+            .traveler-bar .stat { font-size: 0.8rem; }
+            .stat-bar-wrap { width: 40px; }
+            .tab-nav { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 6px; }
+            .tab-btn { width: auto; flex: 1 0 auto; padding: 10px 8px; font-size: 0.8rem; text-align: center; }
+            .panel-area { height: calc(100vh - 300px); min-height: 400px; width: 100%; }
+            .panel { padding: 14px 12px; }
+            .input-row { flex-direction: column; gap: 8px; }
+            .input-row input.dur-input { flex: none; width: 100%; }
+            .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+            .tomato-display { font-size: 2.2rem; margin: 10px 0; }
+            .tomato-preset { justify-content: center; }
+            .tomato-preset .btn {
+                font-size: 0.75rem;
+                padding: 4px 10px;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                color: var(--text);
+            }
+            .tomato-section > div:last-child { flex-wrap: wrap; gap: 8px; }
+            .tomato-section > div:last-child .btn,
+            .tomato-section > div:last-child input {
+                flex: 1 0 auto;
+                width: 120px;
+                padding: 4px 8px;
+                border-radius: 16px;
+                border: 1px solid var(--glass-border);
+                background: var(--glass-bg);
+                color: var(--text);
+                font-size: 0.78rem;
+            }
+            #tomatoTaskInput { width: 100% !important; }
+            .adventure-meta { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .glass,
+            .traveler-bar,
+            .panel-area,
+            .card-item,
+            .tab-btn {
+                background: rgba(20, 24, 36, 0.92) !important;  /* 深色半透明（可改为纯色） */
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            .toast {
+                background: rgba(0, 0, 0, 0.85) !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+        }
+        @keyframes fallWind {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            25% { transform: translateY(25vh) rotate(90deg) translateX(50px); opacity: 0.7; }
+            50% { transform: translateY(50vh) rotate(180deg) translateX(-30px); opacity: 0.5; }
+            75% { transform: translateY(75vh) rotate(270deg) translateX(40px); opacity: 0.4; }
+            100% { transform: translateY(105vh) rotate(360deg) translateX(-20px); opacity: 0.15; }
+        }
+        @keyframes fallSparkle {
+            0% { transform: translateY(0) scale(0.8); opacity: 0.3; }
+            50% { transform: translateY(50vh) scale(1.2); opacity: 0.8; }
+            100% { transform: translateY(105vh) scale(0.8); opacity: 0.3; }
+        }
+        /* ========== 濒死梦境覆盖层 ========== */
+        .dream-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 100; /* 高于所有游戏元素 */
+            pointer-events: none; /* 默认隐藏时不阻挡交互 */
+            background: linear-gradient(180deg, #f0f8e8 0%, #d0e8d0 40%, #b0d0a0 100%);
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            transition: filter 2s ease, opacity 2s ease;
+        }
+        .dream-overlay.active {
+            pointer-events: auto; /* 显示时可交互 */
+        }
+        .dream-overlay.fading {
+            filter: blur(8px) brightness(0.3);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 梦境内部元素：阳光、草地、花瓣、卡片等 */
+        .dream-overlay .sun-glow {
+            position: fixed; top: 5%; left: 50%; transform: translateX(-50%);
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(255,245,210,0.5) 0%, transparent 70%);
+            border-radius: 50%; z-index: 101;
+            animation: sunPulse 10s ease-in-out infinite alternate;
+        }
+        @keyframes sunPulse {
+            0% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            100% { opacity: 0.85; transform: translateX(-50%) scale(1.12); }
+        }
+
+        .dream-overlay .ground {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 28%;
+            background: linear-gradient(180deg, rgba(160,200,140,0.2) 0%, rgba(120,160,100,0.45) 50%, rgba(90,140,70,0.55) 100%);
+            z-index: 101;
+        }
+
+        .dream-overlay .petals-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 102;
+        }
+        .dream-overlay .petal {
+            position: absolute; top: -50px; font-size: 1.3rem;
+            user-select: none;
+            animation: petalFall linear infinite;
+        }
+        @keyframes petalFall {
+            0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0.9; }
+            25% { transform: translateY(25vh) rotate(100deg) translateX(35px); opacity: 0.7; }
+            50% { transform: translateY(50vh) rotate(200deg) translateX(-25px); opacity: 0.5; }
+            75% { transform: translateY(75vh) rotate(300deg) translateX(30px); opacity: 0.35; }
+            100% { transform: translateY(108vh) rotate(400deg) translateX(-18px); opacity: 0.1; }
+        }
+
+        .dream-card {
+            position: relative; z-index: 103;
+            background: rgba(255,255,255,0.22); backdrop-filter: blur(12px);
+            border-radius: 24px; padding: 34px 28px;
+            max-width: 480px; width: 90%;
+            text-align: center;
+            box-shadow: 0 8px 36px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,255,255,0.45);
+            margin: auto;
+        }
+        .dream-card h2 {
+            font-size: 2.2rem; margin-bottom: 6px; color: #3a5a3a;
+            font-weight: 450; letter-spacing: 0.06em;
+        }
+        .dream-card .subtitle {
+            font-size: 0.85rem; color: #6a8a6a; margin-bottom: 16px;
+        }
+        .dream-card .description {
+            font-size: 0.95rem; color: #5a7a5a; line-height: 1.9; margin: 14px 0;
+        }
+        .dream-card .btn-sleep {
+            position: relative;
+            display: inline-block; margin-top: 18px; padding: 12px 28px;
+            background: rgba(130,170,130,0.25); border: 1px solid rgba(80,120,80,0.45);
+            border-radius: 30px; color: #3a5a3a; font-size: 0.95rem;
+            cursor: pointer; transition: 0.35s; letter-spacing: 0.04em;
+        }
+        .dream-card .btn-sleep:hover {
+            background: rgba(110,155,110,0.45); color: #1e3a1e; transform: scale(1.03);
+        }
+        .dream-card .btn-wake {
+            position: absolute;           /* 相对于 .btn-sleep 定位 */
+            left: 100%;                   /* 紧贴主按钮右侧 */
+            top: 50%;
+            transform: translateY(-50%);
+            margin-left: 12px;            /* 与主按钮的间距 */
+            padding: 6px 14px;
+            font-size: 0.72rem;
+            background: rgba(200,160,120,0.25);
+            border: 1px solid rgba(160,120,80,0.4);
+            border-radius: 20px;
+            color: #5a4a3a;
+            cursor: pointer;
+            transition: opacity 0.3s, background 0.3s;
+            opacity: 0;                   /* 初始透明，占位不跳动 */
+            pointer-events: none; 
+            white-space: nowrap;
+        }
+
+        .dream-card .btn-wake.show {      /* 新增：出现时 */
+            opacity: 1;
+            pointer-events: auto; 
+        }
+
+        .dream-card .btn-wake:hover {
+            background: rgba(180,140,100,0.4);
+            color: #2a1a0a;
+        }
+
+        /* 呼喊文字 */
+        .dream-overlay .shout-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 150;
+        }
+        .dream-overlay .shout-text {
+            position: absolute;
+            font-size: 1.8rem; font-weight: 600; letter-spacing: 0.08em;
+            color: rgba(220, 240, 255, 0.95);
+            text-shadow: 0 0 12px rgba(180,210,255,0.8), 0 0 30px rgba(140,180,240,0.5), 0 2px 8px rgba(0,0,0,0.25);
+            white-space: nowrap;
+            animation: shoutFade 2.2s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes shoutFade {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+            30% { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+            70% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.95); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+        }
+
+        /* 黑暗覆盖层（醒来时使用） */
+        .dream-dark-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0a0e17; z-index: 200;
+            pointer-events: none; opacity: 0;
+            transition: opacity 2.5s ease;
+        }
+        .dream-dark-overlay.active {
+            opacity: 1;
+        }
+        .tomato-drop-area {
+            margin-top: 8px;
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+            font-size: 0.7rem;
+            color: #b0c8d8;
+        }
+        .drop-list {
+            list-style: none;
+            padding: 0;
+            margin: 4px 0 0 0;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        .drop-list li {
+            padding: 2px 0;
+            border-bottom: 1px solid #1a2a3a;
+            font-size: 0.68rem;
+        }
+                /* ========== 主题配色定义 ========== */
+        body {
+            transition: background-color 0.8s ease, background-image 0.8s ease;
+        }
+
+        /* 主题配色 */
+        body.theme-classic {
+            --bg-color: #0a0e17;
+            --bg-gradient: radial-gradient(ellipse at 50% 0%, #1a2a3a 0%, #0a0e17 70%);
+            --text: #d0d8e8;
+            --text2: #94a3b8;
+            --accent: #5eb0e5;
+            --gold: #f0c060;
+        }
+        
+        body.theme-ember {
+            --bg-color: #1e1814;
+            --bg-gradient: radial-gradient(ellipse at 50% 100%, #4a3020 0%, #2a1a10 30%, #1e1814 70%);
+            --text: #d0c8b8;
+            --text2: #a09080;
+            --accent: #e89050;
+            --gold: #e0a040;
+        }
+        body.theme-twilight {
+            --bg-color: #120a18;
+            --bg-gradient: radial-gradient(ellipse at 30% 0%, #2a1a4a 0%, #1a1030 40%, #120a18 70%);
+            --text: #d0c8e8;
+            --text2: #a090c0;
+            --accent: #a080e0;
+    --gold: #d0a0f0;
+        }
+        /* 血月残象 - 红色主题 */
+        body.theme-bloodmoon {
+            --bg-color: #1a0a0a;
+            --bg-gradient: radial-gradient(circle at 50% 60%, #4a1010 0%, #1a0a0a 70%);
+            --text: #e0c0c0;
+            --text2: #a08080;
+            --accent: #d04040;
+            --gold: #e06050;
+        }
+
+        /* 梦境回响 - 绿色主题 */
+        body.theme-dreamecho {
+            --bg-color: #0d1e12;
+            --bg-gradient: radial-gradient(ellipse at 50% 30%, #2b5e38 0%, #163a20 40%, #0d1e12 70%);
+            --text: #d4eed8;
+            --text2: #8ab894;
+            --accent: #66cc7a;      /* 鲜嫩草绿 */
+            --gold: #a0e6a0;        /* 嫩芽黄绿 */
+        }
+        /* 右上角主题切换按钮 */
+        .theme-toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 1.4rem;
+            cursor: pointer;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease, background 0.3s ease;
+            line-height: 1;
+        }
+        .theme-toggle-btn:hover {
+            transform: scale(1.15) rotate(15deg);
+            box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+        }
+        .theme-toggle-btn:active {
+            transform: scale(0.9);
+        }
+        /* ========== 安瑟小猫聊天 ========== */
+        /* 安瑟聊天窗口 - 大气不透明 */
+        .anser-chat {
+            position: fixed; bottom: 90px; right: 24px;
+            width: 330px; max-height: 460px;
+            background: #1a1e2a;               /* 深色不透明卡片 */
+            border: 1px solid #2a3040;
+            border-radius: var(--radius);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+            transition: opacity 0.25s, transform 0.25s;
+        }
+        /* 最小化时彻底隐藏聊天窗口，只留猫爪按钮 */
+        .anser-chat-minimized {
+            display: none !important;   /* 完全隐藏整个聊天窗口 */
+        }
+
+        /* 头部 */
+        .anser-chat-header {
+            padding: 12px 16px; font-weight: 600;
+            color: #e0e8f0; display: flex;
+            justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #2a3040;
+            background: #22283a;
+            cursor: pointer;
+        }
+        .anser-cat-avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: #f0c8a0; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 1.2rem; margin-right: 8px;
+        }
+        /* 消息区域 */
+        .anser-chat-body {
+            display: flex; flex-direction: column;
+            height: 340px; padding: 12px;
+        }
+        .anser-chat-messages {
+            flex: 1; overflow-y: auto; margin-bottom: 12px;
+            font-size: 0.85rem; display: flex;
+            flex-direction: column; gap: 10px;
+        }
+        .anser-msg {
+            max-width: 85%; padding: 10px 14px;
+            border-radius: 20px; line-height: 1.5;
+            word-wrap: break-word;
+        }
+        /* 小猫消息 */
+        .anser-msg.bot {
+            align-self: flex-start;
+            background: #252d3a;               /* 比背景稍亮 */
+            color: #d0d8e8;
+            border: 1px solid #3a4050;
+            display: flex; gap: 8px; align-items: flex-start;
+        }
+        /* 用户消息 */
+        .anser-msg.user {
+            align-self: flex-end;
+            background: var(--accent, #f0a060);   /* 使用主题色，保留灵动感 */
+            color: #fff;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        /* 输入行 */
+        .anser-chat-input-row { display: flex; gap: 8px; }
+        .anser-chat-input-row input {
+            flex: 1; padding: 10px 14px;
+            border-radius: 20px;
+            border: 1px solid #3a4050;
+            background: #1e2430;
+            color: #e0e8f0; outline: none; font-size: 0.85rem;
+            transition: border-color 0.2s;
+        }
+        .anser-chat-input-row input:focus {
+            border-color: var(--accent, #f0a060);
+        }
+        /* 发送按钮 */
+        .anser-chat-send-btn {
+            width: 38px; height: 38px; border-radius: 50%;
+            border: none;
+            background: var(--accent, #f0a060); color: #fff;
+            font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s;
+        }
+        .anser-chat-send-btn:active { transform: scale(0.95); }
+        .anser-chat-toggle-btn {
+            background: none; border: none;
+            color: #8899aa; font-size: 1.2rem;
+            cursor: pointer; padding: 0 4px;
+        }
+        /* 滚动条微调 */
+        .anser-chat-messages::-webkit-scrollbar { width: 4px; }
+        .anser-chat-messages::-webkit-scrollbar-thumb { background: #3a4050; border-radius: 2px; }
+        .anser-chat-float-btn {
+            position: fixed; bottom: 24px; right: 24px;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff; font-size: 2rem; cursor: pointer;
+            z-index: 100;
+            display: flex;            /* 改为始终显示 */
+            align-items: center; justify-content: center;
+            box-shadow: 0 4px 20px rgba(240,160,96,0.4);
+            transition: transform 0.2s;
+        }
+        .anser-chat-float-btn:hover { transform: scale(1.1); }
+        
+    </style>
+</head>
+<body>
+<div class="snowfall" id="snowfall"></div>
+<div id="toastContainer"></div>
+<!-- 主题切换按钮 -->
+<button id="themeToggleBtn" class="theme-toggle-btn" title="切换背景主题">
+    🎨
+</button>
+<div class="app-container">
+    <div class="header">
+        <h1>❄️ 卡卡查克 · 雪原冒险日志</h1>
+        <p class="subtitle" id="headerSubtitle" style="font-size:0.85rem;color:var(--text2);transition:var(--transition);">🏔️ 风雪中的每一步，都是活着的证明。</p>
+    </div>
+
+    <div class="main-layout">
+        <div class="sidebar">
+            <div class="traveler-bar" id="travelerBar">
+                <span class="weather-tag" id="weatherTag">☁️ --</span>
+                <span class="weather-tag" id="tentTag" style="display:none;">🏕️ 无帐篷</span>
+                <div class="stat"><span class="icon">🌡️</span><span class="val" id="tempVal">-10</span>°C
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-temp" id="tempBar" style="width:40%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">❤️</span><span class="val" id="healthVal">80</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-health" id="healthBar" style="width:80%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">🍞</span><span class="val" id="hungerVal">70</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-hunger" id="hungerBar" style="width:70%"></div></div>
+                </div>
+                <div class="stat"><span class="icon">😊</span><span class="val" id="moodVal">60</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill fill-mood" id="moodBar" style="width:60%"></div></div>
+                </div>
+            </div>
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="checkin">📝 打卡</button>
+                <button class="tab-btn" data-tab="adventure">🗺️ 冒险</button>
+                <button class="tab-btn" data-tab="cards">🎒 背包</button>
+                <button class="tab-btn" data-tab="stats">📊 统计</button>
+            </div>
+        </div>
+        <div id="panelContainer" class="panel-area"></div>
+    </div>
+    
+</div>
+
+<script>
+    (function() {
+        // ==================== 物品池定义 ====================
+        // 格式: [名称, 描述, 用户查看文本, 旅行者使用文本, 分类, 效果]
+        // 请将之前完整的 CARD_POOL 和 DROP_POOL 数据粘贴在此处
+        const CARD_POOL = {
+            "普通": [
+                ["企鹅蛋","一枚圆滚滚的雪原企鹅蛋，带着尚未消散的体温。","你举起企鹅蛋对着光看了看，里面好像有东西在晃动。","旅行者把企鹅蛋裹进围巾里，轻轻拍了拍，嘴里念叨着“快出来吧小家伙”。","support",{"hunger":10}],
+                ["冰晶碎片","阳光透过云层洒下，这块冰晶碎片折射出彩虹。","你把碎片举到眼前，阳光被分解成七彩光带，晃得你眯起了眼。","旅行者把冰晶碎片挂在背包上，走起路来叮叮当当，他时不时回头看一眼，嘴角带着笑。","support",{"mood":5}],
+                ["保暖袜","用厚实的雪原牦牛绒织成，袜口绣着歪歪扭扭的“探险快乐”。","你把手伸进袜子里试了试，又厚又软，像踩在云朵上。","旅行者立刻脱下湿透的袜子，套上这双保暖袜，用力跺了跺脚，满意地大喊一声“暖和了！”","warm",{"temp":5}],
+                ["雪原蘑菇","只在极夜过后的第一个黎明钻出地面，伞盖泛着淡蓝荧光。","你掰了一小块放进嘴里，先是薄荷般的清凉，然后一股辛辣窜上鼻腔，你忍不住打了个喷嚏。","旅行者把蘑菇切成薄片丢进锅里，汤很快变成了淡蓝色，他尝了一口，舒服地叹了口气。","food",{"hunger":8,"health":3}],
+                ["冻原浆果","一串凝霜的深紫色小果，酸中带甜。","你摘了一颗丢进嘴里，酸得整张脸皱成一团，可随后涌上来的甜味又让你忍不住多摘了两颗。","旅行者小心翼翼地把浆果一颗颗摘下来，每吃一颗就点一下头，像是在给自己加油。","food",{"hunger":6,"health":2}],
+                ["雪狐的脚印","一串逐渐消失在风中的脚印拓印。","你把脚印拓印凑到鼻子前，仿佛还能闻到雪狐留下的淡淡气味。","旅行者把拓印夹进笔记本，对照着指南针看了半天，随后一拍大腿，决定跟着脚印方向走一段试试。","support",{"mood":8}],
+                ["融雪护符","一块刻有简易符文的木牌，能让积雪加速融化。","你把护符贴在额头，感觉到一丝若有若无的温热，还挺舒服。","旅行者把护符插在帐篷边，周围的雪很快化开一小片干燥的地面，他一屁股坐下去，长舒一口气。","warm",{"temp":3,"mood":3}],
+                ["霜花书签","一枚永远保持冰晶形状的透明书签，夹在书页间会散发出清凉的草木香。","你翻开书把书签夹进去，一股清冽的冷香立刻飘了出来，你忍不住深吸一口气。","旅行者把书签夹进日记本，又凑上去闻了闻，然后拿起笔，似乎连字迹都比平时工整了一些。","support",{"mood":6}],
+                ["旅人热汤配方","手写的配方残页，用雪水、根茎和一点点运气就能煮出驱散严寒的金色热汤。","你辨认着潦草的字迹，发现配方里还画了一只歪歪扭扭的锅，看起来挺有年代感。","旅行者照着残页采集了几样植物，煮沸后果然变成一锅金色热汤，他捧着碗喝得满头大汗，直呼过瘾。","food",{"hunger":15,"health":8,"temp":5}],
+            ],
+            "稀有": [
+                ["极光披风","采集极光丝线织成的披风，白天如水般透明，夜晚会流淌着淡绿与紫。","你展开披风抖了抖，在暗处果然泛出幽幽的极光色，你披上转了一圈，感觉自己像一只发光的水母。","旅行者披上披风，在夜色中几乎与极光融为一体，只有他露出的白牙在闪光。","warm",{"temp":5,"mood":5}],
+                ["驯鹿铃","轻轻摇响，清脆的铃声穿透风雪，友善的驯鹿便会循声而来。","你晃了晃铃铛，叮——声音不大但特别清晰，你把它挂在背包上，想象着驯鹿跑来的样子。","旅行者摇了摇铃铛，没一会儿一头驯鹿就探出头来，他笑着跨上去，拍了拍鹿角。","support",{"mood":8,"health":5}],
+                ["雪原地图·残篇","标有一处神秘冰洞的模糊地图，边缘写着“此地有远古回响”。","你摊开地图看了半天，上面画了好几个叉叉，你用手指顺着路线划过去，觉得宝藏好像近在咫尺。","旅行者把地图铺在雪地上研究了好一会儿，然后用手指比划了一个方向，背起行囊出发。","support",{"mood":10}],
+                ["冰洞密码","一行古老的符文，据说念对它，就能开启某座冰封洞穴的无形之门。","你清了清嗓子，试着念出那串符文，喉咙里发出自己都吓了一跳的低沉共鸣。","旅行者面对冰壁朗声念出符文，冰层果然缓缓裂开一道缝，他犹豫了一下，还是退了回来。","support",{"mood":12}],
+                ["暴风雪护符","一枚由冰湖之心打磨的护符，佩戴时风雪会自动绕开你。","你把护符贴近脸颊，周围的空气立刻安静了下来，你甚至能听见自己的呼吸声。","旅行者把护符挂在脖子上，暴风雪果然从他身边绕开了，一只透明的雪精在圈外探头探脑。","warm",{"temp":5,"health":5}],
+                ["远古冰芯","从千米冰层下取出的冰柱，里面封存着千年前的气泡。","你小心地把冰芯贴到耳边，一阵悠远的风声隐隐传来，你赶紧拿开，揉了揉耳朵。","旅行者把冰芯贴在耳边听了很久，然后默默收好，一整天都若有所思。","support",{"mood":15}],
+                ["霜语者的笔记","半本被冻得硬邦邦的笔记，记载着与冰雪精灵沟通的简单词汇。","你翻开冻硬的书页，找到第一个词念了出来，睫毛上挂着的霜果然化了。","旅行者抱着笔记念念有词，抬头时睫毛上的霜已经消失，他还顺便学会了第二个词，开心得像个孩子。","support",{"health":5,"mood":8}],
+                ["雪鹿角冠","自然脱落的雪鹿角制成的头冠，戴上后能短暂听懂野生动物的闲聊。","你小心翼翼地把角冠戴在头上，窗外鸟叫突然变成了碎碎念，你赶紧摘下来，笑着摇头。","旅行者戴着角冠走了几步，忽然噗嗤笑出声来，然后摘下角冠自言自语道：“原来松鼠脾气这么大。”","support",{"mood":10}],
+                ["永霜火种","装在琉璃瓶中的一簇幽蓝火焰，不散发热量却能照亮黑暗。","你拧开瓶盖，幽蓝的光瞬间照亮了墙角，你借着光看清了墙上的小字。","旅行者把瓶子挂在胸前，夜路一下子变得明亮，他大步流星地走着，嘴里还哼起了小调。","warm",{"temp":3,"mood":5,"health":3}],
+            ],
+            "传说": [
+                ["冰封王座","传说中的雪原之主曾使用的王座，寒气逼人。","你小心翼翼地坐上去，屁股传来一阵刺骨凉意，但脑海里闪过的画面让你愣了好一会儿。","旅行者抚摸着王座的扶手，神情庄重地坐了良久，起身后向着王座深深鞠了一躬。","support",{"mood":20,"health":20}],
+                ["永恒极夜","能冻结时光的宝石，只在连续七天坚持后显现。","你握紧宝石，窗外的飘雪好像真的变慢了，你甚至能看清每一片雪花的棱角。","旅行者把宝石贴在胸口，周围的风雪仿佛静止了一瞬，他轻轻呼出一口气，那白雾在空中停留了很久。","support",{"mood":25}],
+                ["冰霜巨人的心脏","一颗仍在缓慢跳动的冰蓝色心脏。","你把手放上去，扑通…扑通…沉稳的节奏让你不由得放慢了呼吸。","旅行者双手捧着心脏，一路都轻手轻脚，生怕惊醒了沉睡的巨人，连说话都变成了耳语。","medical",{"health":30}],
+                ["极地星辰之泪","一颗坠落在雪原深处的星核碎片，内部流淌着液态的星光。","你轻轻触碰它，指尖立刻泛起一阵星辉，耳边仿佛响起空灵的旋律。","旅行者把星辰之泪贴在耳畔，闭上眼睛站了很久，再睁开眼时，他的眼眶有些湿润。","support",{"mood":30}],
+                ["雪灵契约","一张用冰丝织成的古老卷轴，以永不融化的墨水写着：以你的名字交换，雪原将记住你的一切。","你展开卷轴，笔迹泛着幽幽蓝光，签名处留白的地方好像有种吸力，但你忍住了没签。","旅行者将卷轴贴身收好，一整天都显得格外安静，偶尔会摸摸胸口，确认卷轴还在。","support",{"mood":20,"health":10}],
+                ["凛冬长笛","由远古冰髓雕刻而成的长笛，吹响时能召唤温柔的雪。","你举起长笛轻轻吹了一下，一缕几乎听不见的音符飘出，窗外的风立刻安静了一瞬。","旅行者拿起长笛吹出一段悠扬的旋律，咆哮的风雪竟然真的渐渐平息，一缕阳光也随之洒下。","warm",{"temp":10,"mood":15}],
+                ["霜裔王冠","历代雪原守护者代代相传的王冠，佩戴后会浮现历代守护者的虚影。","你捧起王冠，上面沉淀着岁月的重量，你深吸一口气，没有戴上去，但隐约听到了低语。","旅行者单膝跪地，郑重地戴上王冠，起身时眼神变得无比坚毅，仿佛有无数雪原前辈站在他身后。","support",{"health":20,"mood":20}],
+            ]
+        };
+        const DROP_POOL = {
+            "普通": [
+                ["干粮块", "一块压实的谷物与肉干，可快速补充体力。", "你掰了一小块放进嘴里，嚼起来干巴巴的，但挺扛饿。", "旅行者把干粮块掰成两半，就着雪水咽下去，吃完拍了拍肚子。", "food", {"hunger":10}],
+                ["火绒盒", "一个小小的防水火绒盒，在潮湿环境也能轻松生火。", "你打开盒子，里面蓬松的火绒还带着草木香，你试了一下，火星一碰就着。", "旅行者蹲在背风处，用火绒盒轻松升起一堆篝火，搓着手烤了起来。", "warm", {"temp":3,"mood":3}],
+                ["绷带", "一卷干净的亚麻绷带，用以处理小伤口。", "你拉开绷带，手感柔软，还透着一股淡淡的草药味。", "旅行者熟练地给手臂上的伤口缠好绷带，活动了一下，满意地点点头。", "medical", {"health":5}],
+                ["暖石", "一块被篝火烤热的石头，用布包好可暖手数小时。", "你隔着布握住石头，热量慢慢透过布料传过来，手心一下就暖了。", "旅行者把暖石揣进怀里，原本缩着的肩膀慢慢放松了下来。", "warm", {"temp":5}],
+                ["熏肉干","一块用冷杉枝熏制的驯鹿肉干，表面泛着油光，咸香耐嚼。","你咬下一角，烟熏的风味立刻充满口腔，咸度刚好，很适合补充体力。","旅行者切下一小块含在嘴里舍不得咽，这味道让他想起了远方林中的篝火。","food",{"hunger":10}],
+                ["能量棒","用冻干浆果和压碎的坚果制成的便携食物，麻雀虽小五脏俱全。","你咬了一口，酸甜的浆果碎在齿间爆开，配上坚果的油脂，意外地好吃。","旅行者吃完后把包装纸小心叠好收起来，觉得这一天的脚程都有了底气。","food",{"hunger":8}],
+                ["冻莓干","采摘后直接在雪地里冻干的深紫色浆果，保留了原有的酸甜。","你抓了几粒丢进嘴里，冰凉酸甜，有点像小时候吃过的水果糖。","旅行者边走边时不时摸出几粒冻莓干含着，原本紧抿的嘴角终于松动了一些。","food",{"hunger":5,"mood":1}],
+                ["干酪块","压制风干的驯鹿奶酪，质地坚硬但奶香浓郁，可快速为身体提供热量。","你掰下一小块，硬得差点崩了牙，但化开后的奶香和咸味让人精神一振。","旅行者把干酪块扔进热水里化开，搅成一碗淡黄色的热汤，喝得满头细汗。","food",{"hunger":8,"health":1}],
+                ["风干鱼片","用冰泉里的小银鱼剖片风干而成，薄得透光，保留了大半鲜味。","你对着光看了看，鱼片边缘泛着淡淡的银色，撕下一丝放进嘴里，咸鲜味很足。","旅行者把鱼片撕成细丝，就着雪一口一口咽下去，吃完还舔了舔嘴唇。","food",{"hunger":7,"mood":1}],
+                ["苔原燕麦饼","把苔原上的野生燕麦压成饼，再在石板上烤得焦黄，带着质朴的谷物香。","你啃了一口，饼子又硬又糙，但越嚼越有一股阳光的味道，很踏实。","旅行者用石头把饼子敲碎泡进水里，呼噜噜地喝完，擦了擦嘴角，力气似乎回来了。","food",{"hunger":9}],
+                ["雪根脆片","一种生长在冻土下的球根，切片后烤脆，吃起来像薯片但更甜。","你拿起一片，薄薄脆脆的，带着一丝自然的焦糖味，让人想一把一把地吃。","旅行者咔嚓咔嚓地嚼着脆片，心情明显好转，还把掉落的碎屑喂给了一只路过的雪雀。","food",{"hunger":6,"mood":2}],
+                ["自热贴","撕开包装后与空气接触就能持续发热的小布贴，可贴在衣服内侧。","你撕开一张贴在胸口，不一会儿就有暖意透进来，像揣了个小暖炉。","旅行者把自热贴贴在背心内侧，那点持续的温热让他不再打哆嗦。","warm",{"temp":5}],
+                ["姜糖块","用老姜汁和少量糖熬制成的硬糖，含在嘴里能驱散寒意。","你含了一块，辛辣的姜味冲上脑门，紧接着身体就暖烘烘的。","旅行者剥开一块姜糖扔进嘴里，被辣得嘶嘶吐气，但原本发青的嘴唇很快恢复了血色。","food",{"temp":3,"mood":1}],
+                ["护耳套","用雪兔毛缝制的耳罩，皮毛蓬松柔软，能紧紧裹住双耳抵御冻伤。","你戴上去试了试，耳朵立刻像埋进了暖和的棉絮里，风声都变得遥远模糊。","旅行者把护耳套扣好，原本冻得通红的耳朵逐渐恢复了知觉，他感激地拍了拍头顶。","warm",{"temp":3,"mood":1}],
+                ["草药嚼片", "将苦艾草和薄荷压成的薄片，嚼一嚼能提神醒脑，缓解头痛。", "你取了一片放进嘴里，苦涩中带着清凉，太阳穴的抽痛感减轻了不少。", "旅行者慢慢嚼着草药片，紧皱的眉头渐渐舒展开。", "medical", {"health": 4}],
+                ["破旧手套", "一只被遗弃的旧手套，手背处磨出了洞，但还能勉强保护手指不被冻伤。", "你套上那只破手套，虽然破了洞，但手指总算不用直接暴露在风雪里了。", "旅行者捡起破手套戴在左手上，右手揣进怀里，继续往前走。", "warm", {"temp": 2}],
+                ["幸运兔脚", "一只风干的雪兔后脚，据雪原猎人说挂在背包上能带来好运气。", "你对着兔脚端详了一番，毛茸茸的，还带着一点青草味，你把它挂在背包拉链上。", "旅行者把兔脚系在背包上，拍了拍它，似乎在祈求接下来的路途平安。", "support", {"mood": 4}],
+                ["励志纸条", "一张被揉得皱巴巴的纸条，上面用颤抖的笔迹写着“再坚持一天”。", "你展开纸条，字迹虽然潦草，却仿佛能感受到书写者当时的决心，你小心地把它夹进笔记本。", "旅行者对着纸条看了很久，然后郑重地叠好放进口袋，眼神比之前坚定了许多。", "support", {"mood": 5}],
+                
+            ],
+            "稀有": [
+                ["治疗药膏", "由冻原草药制成的药膏，能快速治愈冻伤。", "你拧开盖子，一股冰薄荷味冲进鼻子，涂在手上凉丝丝的。", "旅行者把药膏仔细涂抹在冻伤的手背上，很快红肿就消退了，他长舒一口气。", "medical", {"health":15}],
+                ["指南针", "一个即使在极地磁场下也能稳定指向的古老指南针。", "你平举指南针，指针轻轻晃了晃就稳住了，你转了个圈，指针纹丝不动。", "旅行者掏出指南针对照了一下方向，收起地图，大步朝北走去。", "support", {"mood":8}],
+                ["保温睡袋", "用雪鸮绒填充的睡袋，能在-40°C环境中维持体温。", "你拉开拉链把手伸进去，里面暖烘烘的，像被一堆小猫围着。", "旅行者钻进睡袋，只露出一个脑袋，很快就传来均匀的呼吸声。", "warm", {"temp":10,"health":5}],
+                
+
+                ["捕兽夹","折叠式轻便捕兽夹，放置在雪地中能捉到小型猎物。耐久：5","你试了试开合，夹齿很锋利，放在营地附近应该能有收获。","旅行者在一块岩石后布下捕兽夹，第二天清晨收夹时上面果然多了一只肥硕的雪兔。","food",{"durability":5, "onUse":{"hunger":10, "mood":1}}],
+
+                ["保温水壶","内壁镀了一层极地蜥蜴鳞粉的水壶，能将雪水自然保温数小时。耐久：8","你倒进雪水摇了摇，几分钟后倒出来的水是微温的，这设计太实用了。","旅行者拧开壶盖喝了一口温水，热气从喉咙暖到胃里，他舒服地哈了一口气。","warm",{"durability":8, "onUse":{"temp":3, "mood":1}}],
+
+                
+            ],
+            "传说": [
+                ["极地罗盘", "不仅能指方向，还会在靠近远古遗迹时微微发光的罗盘。", "你翻开罗盘盖子，边缘的符文微微发亮，你赶紧合上，心跳有点快。", "旅行者发现罗盘突然亮起蓝光，他深吸一口气，朝着光芒指引的方向快步走去。", "support", {"mood":15,"health":5}],
+                ["生命之水", "一小瓶传说能起死回生的冰泉之水。", "你举起小瓶对着光，液体里流动着细小的金点，你轻轻晃了晃，光点聚成漩涡。", "旅行者小心翼翼地喝下一小口生命之水，苍白的脸立刻红润起来，他惊讶地看着瓶子，又小心地盖好。", "medical", {"health":25}],
+                ["冰钓竿","看似普通的钓竿，鱼线却织入了冰蚕丝，能在冰层下钓上活鱼。耐久：10","你甩了甩鱼竿，竿身柔韧得让你意外，看来能派上不少用场。","旅行者在冰面上凿了个洞，把钓竿伸进去，没过多久鱼线猛地一沉，一条银闪闪的鱼破水而出！","food",{"durability":10, "onUse":{"hunger":12, "mood":1}}],
+                ["雪地帐篷","用特殊防水布料制成的帐篷，能抵御暴风雪的侵袭。耐久：5","你试着搭起帐篷，结构稳固，布料厚实，感觉在里面过夜应该没问题。","旅行者在暴风雪来临前迅速搭好帐篷，躲在里面听着外面的风呼啸，身体慢慢恢复了温暖。","warm",{"durability":5, "onUse":{"temp":4, "health":2}}],
+            ],
+        };
+        
+        const THANKS_POOL = {
+            food: [
+                "“太及时了！我肚子正咕咕叫呢。”旅行者眼睛一亮。",
+                "“这下有东西吃了，谢谢你！”他小心地收进行囊。",
+                "旅行者闻了闻，露出满意的微笑：“是家乡的味道。”",
+                "“你总是知道我需要什么。”他拍了拍你的肩膀。",
+            ],
+            warm: [
+                "“这下能扛过今晚的暴风雪了。”旅行者裹紧大衣。",
+                "“暖和多了！”他朝手心哈了口气，不再发抖。",
+                "旅行者把物品贴近胸口：“雪原的夜不会难熬了。”",
+                "“再来一阵暴风雪也不怕了。”他用力点了点头。",
+            ],
+            medical: [
+                "旅行者轻叹一声：“伤口没那么疼了…多谢。”",
+                "“这个能救我一命。”他郑重地把东西收好。",
+                "“有了这个，还能继续赶路。”他活动了一下受伤的手臂。",
+                "“在这冰原上，健康比什么都重要。”他感激地看着你。",
+            ],
+            support: [
+                "旅行者小心地收好：“这份心意，我收下了。”",
+                "“这东西…好像在发光。”他喃喃道，眼里多了些神采。",
+                "“和你同行真是太好了。”他把礼物举过头顶对着极光看。",
+                "旅行者珍重地点点头：“我不会忘记你的帮助。”",
+            ],
+            default: [
+                "旅行者收下了，朝你露出一个腼腆的微笑。",
+                "“谢谢，在这雪原上每一份馈赠都格外珍贵。”他轻声说。",
+                "“我会好好使用它的。”旅行者拍了拍你的手背。",
+            ]
+        };
+
+        // ==================== 全局配置与工具 ====================
+        const UTC_OFFSET_HOURS = 8;
+        const ADVENTURE_REFRESH_SEC = 30 * 60;
+        const TICK_INTERVAL_MS = 8000;
+        const MAX_OFFLINE_HOURS = 10;
+        // 帐篷等级定义：连续天数 -> 名称、减免比例、升级日志
+        const TENT_LEVELS = [
+            { days: 3, name: '简陋帐篷', reduction: 0.2, log: '旅行者用捡来的帆布和树枝搭起了一座简陋帐篷，至少能挡一点风。' },
+            { days: 5, name: '加固帐篷', reduction: 0.4, log: '经过几天的努力，旅行者用冻土和兽皮加固了帐篷，它现在稳固多了。' },
+            { days: 7, name: '保暖帐篷', reduction: 0.6, log: '旅行者在帐篷内衬了厚厚的苔藓和羽毛，钻进帐篷就像钻进了一个温暖的茧。' },
+            { days: 10, name: '极地帐篷', reduction: 0.8, log: '帐篷已经焕然一新，双层防风墙加上雪鸮绒内衬，暴风雪也只能在门外咆哮。' },
+            { days: 14, name: '传奇庇护所', reduction: 1.0, log: '旅行者几乎把帐篷建成了一座微型冰屋，即使极夜降临，里面也温暖如春。' }
+        ];
+        const TENT_ICONS = ['', '🏕️', '⛺', '🛖', '🏠', '🏰'];
+        const TENT_DISPLAY_NAMES = ['', '简陋帐篷', '加固帐篷', '保暖帐篷', '极地帐篷', '传奇庇护所'];
+
+        
+        // 天气衰减速率调整（乘数，1为正常，>1衰减更快，<1衰减更慢）
+        // 每条 scene 是沉浸式场景描述，用于冒险面板和安瑟联动
+        const WEATHER_RATES = {
+            "暴风雪": { temp: 1.4, mood: 1.1, health: 1.0, hunger: 1.2, scene: "狂风裹着雪粒抽打着脸颊，每一步都像踩进冰窟窿。天地之间只剩下呼啸声，你弓着腰、眯着眼，在白色的混沌中艰难前行。" },
+            "晴朗":   { temp: 0.7, mood: 0.8, health: 1.0, hunger: 0.9, scene: "阳光洒在无垠的雪原上，每一片冰晶都在闪闪发光。远处的地平线清晰得像刀切的一样，你眯起眼睛望向远方，心里莫名地踏实。" },
+            "极夜":   { temp: 1.2, mood: 1.3, health: 1.0, hunger: 1.0, scene: "黑暗笼罩了一切，只有头顶的星光微弱地勾勒出雪地的轮廓。你不知道现在是白天还是深夜，时间仿佛在这里失去了意义。" },
+            "雾凇":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, scene: "树枝和枯草都裹上了一层晶莹的冰壳，整个世界安静得像一幅画。你忍不住放轻了脚步——这么美的景色，不该被打扰。" },
+            "冰雹":   { temp: 1.3, health: 1.1, mood: 1.0, hunger: 1.1, scene: "指头大的冰雹噼里啪啦砸下来，你只能把背包举过头顶一路小跑。一颗砸在肩膀上，疼得你龇牙咧嘴。" },
+            "小雪":   { temp: 0.9, mood: 0.9, health: 1.0, hunger: 1.0, scene: "细密的雪花缓缓飘落，像天空在撒白糖。世界变得柔软而安静，连呼吸都慢了下来。" },
+            "极光":   { mood: 0.6, temp: 0.9, health: 1.0, hunger: 1.0, scene: "绿色的光幕在头顶缓缓舞动，像天神打翻了调色盘。你仰头看了很久，几乎忘记了寒冷——这一刻，雪原值得了。" },
+            "冻雨":   { temp: 1.3, health: 1.1, mood: 1.1, hunger: 1.1, scene: "雨滴落在衣服上立刻结冰，你感觉自己正在慢慢地被一层冰壳包裹。每走一步，冰碴子都在嘎吱作响。冷到骨头里了。" },
+            "白化天": { temp: 1.0, mood: 1.2, health: 1.0, hunger: 1.0, scene: "四周全是白茫茫的一片，天和地连在了一起没有界线。你分不清哪里是雪、哪里是天空，只能凭着感觉深一脚浅一脚地往前走。" },
+            "钻石尘": { temp: 0.8, mood: 0.8, health: 1.0, hunger: 1.0, scene: "细小的冰晶悬浮在空气中，像无数颗钻石在阳光下闪烁。你伸出手接住一颗，它在掌心瞬间化成了水——凉丝丝的。" }
+        };
+
+        const WEATHERS = ["暴风雪","晴朗","极夜","雾凇","冰雹","小雪","极光","冻雨","白化天","钻石尘"];
+        const WEATHER_EFFECTS = {
+            "暴风雪": { count: 60, minSize: 1.5, maxSize: 3.0, minDur: 2, maxDur: 6, opacity: 0.9, wind: true },
+            "晴朗": { count: 0, minSize: 0, maxSize: 0, minDur: 0, maxDur: 0, opacity: 0 },
+            "极夜": { count: 20, minSize: 0.5, maxSize: 1.5, minDur: 8, maxDur: 15, opacity: 0.5, glow: true },
+            "雾凇": { count: 15, minSize: 1.0, maxSize: 2.0, minDur: 10, maxDur: 20, opacity: 0.6 },
+            "冰雹": { count: 50, minSize: 0.3, maxSize: 0.6, minDur: 1, maxDur: 3, opacity: 0.8, hail: true },
+            "小雪": { count: 30, minSize: 0.8, maxSize: 1.8, minDur: 6, maxDur: 12, opacity: 0.7 },
+            "极光": { count: 25, minSize: 0.5, maxSize: 1.2, minDur: 5, maxDur: 10, opacity: 0.6, aurora: true },
+            "冻雨": { count: 40, minSize: 0.2, maxSize: 0.4, minDur: 2, maxDur: 4, opacity: 0.7, rain: true },
+            "白化天": { count: 5, minSize: 0.2, maxSize: 0.4, minDur: 15, maxDur: 25, opacity: 0.2 },
+            "钻石尘": { count: 35, minSize: 0.3, maxSize: 0.5, minDur: 8, maxDur: 16, opacity: 0.5, sparkle: true }
+        };
+        // ==================== 通用事件池（60条：原40条改值 + 新增20条） ====================
+        const EVENT_POOL = [
+            // ---------- 原有事件（数值已调整） ----------
+            { text: "旅行者正与一头饥肠辘辘的雪原狼对峙，手中紧握着唯一的武器——一根冻得发硬的鱼干。", effects: { health: -2, mood: -1, hunger: -1 } },
+            { text: "旅行者被卷入一场突如其来的白毛风中，他死死拽着驯鹿的缰绳，嘴里灌满了冰碴。", effects: { temp: -3, health: -2 } },
+            { text: "旅行者踩塌了冰层，半条腿陷入刺骨的河水，他挣扎着爬上来，却发现靴子冻成了冰坨子。", effects: { temp: -4, health: -2 } },
+            { text: "旅行者正在用冻僵的手指剥开一头冰原熊留下的痕迹，熊的脚印消失在雾里，他决定绕路。", effects: { mood: -1, hunger: -1 } },
+            { text: "旅行者遇到了一头暴躁的雪牦牛，它冲着旅行者刨雪示威，旅行者只好退着走，边走边唱走调的号子以表友好。", effects: { mood: -2 } },
+            { text: "旅行者在一片冰谷里遭遇小型雪崩，他钻进一个冰洞躲过一劫，洞里竟然还有别人留下的半张毛毯。", effects: { health: -2, mood: -1, temp: +2 } },
+            { text: "旅行者正在尝试用最后一点火种煮一锅热汤，他不小心把靴垫掉进了锅里，汤头意外地鲜美。", effects: { hunger: +3, mood: +1 } },
+            { text: "旅行者找了个背风处升起篝火，正烤着捡来的冻蘑菇，香气引来两只好奇的雪狐远远观望。", effects: { temp: +3, mood: +1, hunger: +2 } },
+            { text: "旅行者在小屋废墟里找到一口破铁锅，他敲敲打打补好窟窿，打算炖一锅苔原野菜。", effects: { mood: +1, hunger: +1 } },
+            { text: "旅行者把冻硬的干粮贴在胸口捂软，自言自语道：这是最后的存粮了，明天必须找到补给。", effects: { hunger: +1, mood: -1 } },
+            { text: "旅行者发现了一座被冰封的石门，门上刻着一只巨大的眼睛，当他凝视时，眼睛似乎动了一下。", effects: { mood: -1 } },
+            { text: "旅行者捡到了一枚还在发光的蓝色冰晶，握在手里能听见隐隐约约的歌声，像是从冰层深处传来。", effects: { mood: +2, temp: -1 } },
+            { text: "旅行者跟着一串奇怪的螺旋脚印走了一刻钟，发现它们在一面光滑的冰壁前突然消失了。", effects: { mood: -1 } },
+            { text: "旅行者遇见了一座从冰块里长出的巨型花朵，花瓣透明，滴落的露水落在地上立刻结成珍珠般的冰珠。", effects: { mood: +2 } },
+            { text: "旅行者看见极光中垂下一条摇曳的光带，光带扫过雪地时，竟然短暂地映出了陌生的人影。", effects: { mood: +1 } },
+            { text: "旅行者在旧营地里挖出一个封口的陶罐，里面装满干枯的种子，罐底刻着一行看不懂的古文字。", effects: { mood: +1, hunger: +1 } },
+            { text: "旅行者碰上一位同样独行的旅人，两人默默交换了一壶热酒和一张皱巴巴的地图，然后分道扬镳。", effects: { temp: +2, mood: +1, hunger: +2 } },
+            { text: "旅行者救起了一只翅膀结冰的雪鸮，雪鸮回过神来后，叼走了他仅存的半块肉干。", effects: { mood: +1, hunger: -2 } },
+            { text: "旅行者来到了一个雪原小集市，用一枚闪亮的冰晶换了一双新袜子，还听了一场关于冰龙的评书。", effects: { temp: +1, mood: +2 } },
+            { text: "旅行者帮一位老猎人修理雪橇，老人感激地塞给他一块驯鹿奶酪，并告诉他前方有风暴。", effects: { hunger: +2, mood: +1, health: +1 } },
+            { text: "旅行者发现一座被冰封的古老灯塔，塔顶的透镜仍在极夜中缓缓转动，投下微弱的光斑。", effects: { mood: +1 } },
+            { text: "暴风雪中，旅行者循着微弱的铃铛声找到了一群驯鹿，他混入队伍跟着走了半日，直到风停才悄悄脱离。", effects: { temp: +1, mood: +1 } },
+            { text: "旅行者用冰镐敲开一处冰崖，里面竟然封存着一艘古代破冰船的船首，船头的雕像依然目视前方。", effects: { mood: +1 } },
+            { text: "在一片雾凇林里，旅行者踩着吱嘎作响的雪，忽然树枝上的冰晶同时坠落，在他周围下了一场钻石雨。", effects: { mood: +2, temp: -1 } },
+            { text: "旅行者路过一片冰湖，湖面下冻着成千上万的气泡，他趴在冰上看了很久，仿佛在窥视另一个世界。", effects: { mood: +1, temp: -1 } },
+            { text: "旅行者遇到了一位用驯鹿拉雪橇的信使，信使递给他一封没有收件人的信，然后消失在风雪中。", effects: { mood: -1 } },
+            { text: "旅行者在雪地上发现一串极小的脚印，他追踪了很久，最后只找到一只正在啃松果的迷你冰鼠。", effects: { hunger: +1, mood: +1 } },
+            { text: "一只雪鸮突然落在旅行者肩头，歪着头打量他许久，留下一根羽毛后振翅飞走。", effects: { mood: +2 } },
+            { text: "旅行者穿越冰蚀峡谷时，听到两岸传来空灵的回声，他试着喊了一声，回声竟变成了一段陌生的旋律。", effects: { mood: +1 } },
+            { text: "旅行者在一块裸露的岩石上坐下来休息，岩石的纹理中嵌满了细小的三叶虫化石，他轻轻抚摸，像在摸远古的脉搏。", effects: { mood: +1 } },
+            { text: "暴雪过后，旅行者发现自己的帐篷被一层晶莹的冰壳完全包裹，他敲开冰壳，感觉自己像破茧的飞蛾。", effects: { temp: +2, mood: +1 } },
+            { text: "旅行者在雪原上偶遇了一群正在筑冰屋的原住民，他们比划着手势邀请他进去喝了一碗滚烫的海豹汤。", effects: { hunger: +3, temp: +2, health: +1, mood: +2 } },
+            { text: "地热泉在雪原中蒸腾起白雾，旅行者脱下手套试探水温，却发现泉水中漂浮着几瓣永远不会凋谢的冰花。", effects: { temp: +2, mood: +1 } },
+            { text: "旅行者捡到一只冻得硬邦邦的皮手套，里面塞着一张纸条，上面只写着：“往东走，有熊。真的。”", effects: { mood: +1 } },
+            { text: "一根巨大的鲸类肋骨斜插在雪中，旅行者绕着它走了一圈，肋骨表面刻满了细密的捕鲸记事。", effects: { mood: +1 } },
+            { text: "旅行者遇到一位独自雕刻冰碑的老人，老人说每一座冰碑下都埋着一个曾经许下的愿望，春天时愿望就会融化升空。", effects: { mood: +2 } },
+            { text: "极光在头顶剧烈翻涌，旅行者抬起头，看见光带中仿佛有一队队骑着驯鹿的幻影无声掠过。", effects: { mood: +1, temp: -1 } },
+            { text: "旅行者在冰裂缝的断面上发现了一层黑色的火山灰，他意识到很久以前这里曾有过一场冰与火的交锋。", effects: { mood: +1 } },
+            { text: "一只皮毛银白的雪狐远远地跟着旅行者走了三天，既不靠近也不远离，仿佛在护送他穿越自己的领地。", effects: { mood: +2, health: +1 } },
+            { text: "在无风的夜里，旅行者点起一小堆篝火，火光照亮了周围一圈，他忽然发现雪地上映出了自己之外的另一道人影——抬头看时，却什么也没有。", effects: { mood: -3, temp: +1 } },
+
+            // ---------- 新增20条普通事件 ----------
+            { text: "旅行者花了整个上午凿开被冰封的补给箱，里面却只有几块发霉的饼干，霉味呛得他直咳嗽。", effects: { hunger: -1, mood: -2 } },
+            { text: "一场冻雨把外套冻成了硬邦邦的冰甲，旅行者每走一步都发出咔咔的声响，惹得路过的雪兔驻足打量。", effects: { temp: -2, mood: -1 } },
+            { text: "指南针的指针突然开始胡乱转圈，旅行者意识到自己可能闯进了一片磁场异常的区域，不安地环顾四周。", effects: { mood: -2 } },
+            { text: "帐篷被狂风撕开了一道口子，冷风夹着雪粒灌了一整夜，旅行者天亮时眼眶发青，几乎没怎么睡着。", effects: { health: -2, temp: -2, mood: -1 } },
+            { text: "雪盲症突然发作，眼前白茫茫一片，旅行者只能蒙着眼睛蹲在原地，等了快两个小时视力才慢慢恢复。", effects: { health: -1, mood: -1 } },
+            { text: "一群迁徙的驯鹿经过，旅行者跟着走了好一段路，头鹿却忽然受惊狂奔，整群鹿轰地散开，溅了他满脸雪末。", effects: { temp: +1, mood: +1 } },
+            { text: "前人废弃的雪洞里竟还留着几块干柴和小半盒火柴，旅行者小心地把火柴收进防水袋里。", effects: { temp: +2, mood: +1 } },
+            { text: "远远望见地平线上有炊烟，旅行者赶到时只剩一堆熄灭的篝火和空荡荡的营地，灰烬被风卷得漫天都是。", effects: { mood: -1 } },
+            { text: "在冰崖下避风时，头顶突然掉下几块碎冰，擦着旅行者的后脑砸在背包上，发出沉闷的一声响。", effects: { health: -1 } },
+            { text: "一本被冻得硬邦邦的日记本，旅行者焐了半天才翻开，却发现每一页都是空白的。", effects: { mood: -1 } },
+            { text: "旅行者用了一整天翻过一座冰丘，登顶后却发现山的另一边是一模一样的雪原，连地平线的弧度都没有变化。", effects: { hunger: -1, mood: -2 } },
+            { text: "靴底终于磨穿了，旅行者用冻硬的苔藓塞住破洞，再用绑行李的细绳缠了几圈，踩实后勉强还能走路。", effects: { health: -1, mood: -1 } },
+            { text: "风暴过后，旅行者在乱石间发现一只冻得硬邦邦的雪兔，分量不轻，算是这几天最好的收获了。", effects: { hunger: +3 } },
+            { text: "一位隐居老人教旅行者用特定的哼唱频率让冰面短暂软化，旅行者挠了挠头大为震撼，怎么才能做到这一点呢？", effects: {} },
+            { text: "旅行者对着远处的冰山放声大喊，过了好一阵才传来微弱的回声，虽然模糊，但至少这世界还有回音。", effects: { mood: +1 } },
+            { text: "连续三天的暴雪把之前的所有地标都抹平了，旅行者站在雪丘上转了好几圈，连自己来时的脚印都快被新雪盖住。", effects: { hunger: -1, mood: -2 } },
+            { text: "冰缝里找到一簇冻僵的蕨类植物，旅行者捣碎了泡水喝，带着一股薄荷般的清凉，喉咙舒服了不少。", effects: { mood: +1, temp: +1 } },
+            { text: "一头驯鹿主动靠近，旅行者伸手摸了摸它厚实的颈毛，驯鹿蹭了蹭他的手，然后转身跑远了。", effects: { mood: +1 } },
+            { text: "旅行者不小心滑进一个深雪坑，挣扎出来时帽子被尖冰勾掉了，两只耳朵冻得通红发硬，赶紧立起衣领裹住。", effects: { temp: -2, health: -1 } },
+            { text: "极夜里旅行者点起一小堆篝火，微弱的火苗只够照亮一小圈雪地，他的影子在雪面上随着火光摇来晃去。", effects: { mood: -1, temp: +1 } },
+            { text: "旅行者蹲下来仔细观察雪地上几种不同动物的足迹交错在一起，分辨了半天也没看出个所以然，但觉得颇有趣味。", effects: {} },
+            { text: "风吹过冰原时卷起一层薄薄的雪粒，在阳光下像一层流动的白纱，旅行者停下脚步看了好一会儿。", effects: {} },
+            { text: "旅行者发现一块形状奇特的浮冰，边缘被风雕刻得像一枚巨大的六角雪花，他绕着走了两圈，啧啧称奇。", effects: {} },
+            { text: "一只雪兔在不远处蹦跳着穿过雪地，留下两行细细的脚印，旅行者看着它消失在小丘后面，心情莫名放松了一瞬。", effects: {} },
+            { text: "旅行者在一处背风的岩壁上发现了几幅前人用石头刻下的简单图画，画的好像是驯鹿和太阳，虽然粗糙却让人感到亲切。", effects: {} },
+            { text: "天上飘下几片零星的雪花，其中一片正好落在旅行者的手套上，形状完整，六个瓣都清清楚楚。", effects: {} },
+            { text: "旅行者停下来紧了紧背包带，掏出水壶喝了口冰得牙疼的雪水，然后继续朝前走。", effects: {} },
+            { text: "远处传来一阵低沉的轰隆声，旅行者抬头看见一座冰山的边缘崩落了一大块，激起漫天雪雾，虽然离得很远但还是本能地退了半步。", effects: {} },
+            { text: "旅行者发现一棵被冰完全包裹的小松树，里面竟然封存着一只正在打哈欠的松鼠的模糊轮廓，也不知道是多少年前的事了。", effects: {} },
+            { text: "一块裸露的黑色岩石上不知被谁用白石头压出了一张笑脸，两颗石子当眼睛，弯弯的裂缝正好是嘴巴，旅行者看见后忍不住也跟着咧了咧嘴。", effects: {} },
+            { text: "一只好奇的小雪狐偷偷叼走了旅行者放在背包侧袋的备用鞋带，在十几步外甩来甩去地玩，旅行者追也不是不追也不是。", effects: {} },
+            { text: "旅行者用冰镐在冰面上凿洞取水时，凿出来的冰屑在阳光下炸开一小圈彩虹，刚好套在他的影子上，像给自己戴了顶虚幻的帽子。", effects: {} },
+            { text: "一阵旋风卷起雪粒在原地打转，竟然形成了一个半人高的小型雪龙卷，旅行者伸手进去捞了一把，雪粒散去后手掌里只剩一汪凉水。", effects: {} },
+            { text: "一只胖墩墩的雪鹀落在旅行者几步远的地方，歪着头发出几声不成调的鸣叫，像在学他之前哼过的号子。", effects: {} },
+            { text: "旅行者在冰壁上看到自己的影子被极光染成了绿色和紫色的双色人，他试着做了几个夸张的动作，影子也照做，自己玩了好一阵。", effects: {} },
+            { text: "地上有块冰长成了天然的凸透镜形状，旅行者把它举到眼前，远处的一座雪山立刻变得又大又近，连山脊上的裂缝都能数清楚。", effects: {} },
+            { text: "旅行者突然听到一阵有节奏的敲击声，找了半天才发现是一只啄木鸟正在啄一根露出雪面的枯枝，声音在寂静的雪原上格外清脆。", effects: {} },
+            { text: "他捡到一枚被冻在冰块里的老式铜纽扣，上面刻着一艘小船，旅行者把它捂在手心里化开后放进了贴身口袋，觉得能带来好运。", effects: {} },
+        ];
+
+        // ==================== 极端状态专属事件池 ====================
+        const EXTREME_EVENTS = {
+            hunger: [
+                { text: "旅行者饿得眼前阵阵发黑，腿一软就跪在了雪里，脑子里反复浮现的只有一碗冒着热气的清粥。", effects: { health: -3, mood: -2, hunger: -1 } },
+                { text: "前方好像凭空出现了一桌饭菜，旅行者手脚并用地爬过去，伸手一抓却只摸到一把冰冷的雪。", effects: { mood: -2, hunger: -1 } },
+                { text: "旅行者用最后一丝力气把背包倒空，里面只滚出几块冰碴、半截断掉的鞋带和一张舔干净的包装纸。", effects: { mood: -2, health: -1 } },
+            ],
+            mood: [
+                { text: "旅行者坐在雪地里久久不愿起身，心里那个声音反复在说：站起来又能怎样，前面还不是一样只有雪。", effects: { health: -2, mood: -2, hunger: -1 } },
+                { text: "旅行者把脸埋进冻得硬邦邦的手套里，开始逐条否定自己之前做过的每一个决定，肩膀微微发抖。", effects: { mood: -3, temp: -1 } },
+                { text: "旅行者冲着灰白色的天空发出一声嘶哑的吼叫，声音刚出口就被风吞没，连一点回音都没有。", effects: { mood: -2, health: -1 } },
+            ],
+            health: [
+                { text: "腰侧的旧伤口又开始往外渗血，旅行者用手死死按住，但指缝间仍有温热的液体不断往外渗。", effects: { health: -3, mood: -2, temp: -1 } },
+                { text: "一阵强烈的眩晕袭来，旅行者单膝跪地用登山杖撑住身体，闭上眼大口喘气，太阳穴在突突地跳。", effects: { health: -2, mood: -2 } },
+                { text: "旅行者刚迷糊了几秒就歪倒下去，手套不知何时脱落了，露出的手指呈现出不自然的青白色，完全不听使唤。", effects: { health: -3, temp: -2 } },
+            ],
+            temp: [
+                { text: "旅行者的睫毛上结满了白霜，每次眨眼都能感到冰碴互相粘连又被扯开，关节像灌了冻住的糖浆一样僵硬。", effects: { health: -2, temp: -2, mood: -1 } },
+                { text: "暴风雪把旅行者死死困在浅洞里，他蜷缩成一团，感觉到体温正从手指和脚趾一点一点地流失。", effects: { temp: -3, health: -2 } },
+                { text: "旅行者反复敲打火石，每一次火花刚溅起来就被风扑灭，他把冰凉的打火石攥在手心，心底升起一阵恐惧。", effects: { temp: -2, mood: -2 } },
+            ]
+        };
+
+        function getLocalDate(ts = Date.now()) { const d = new Date(ts + UTC_OFFSET_HOURS*3600000); return d.toISOString().slice(0,10); }
+        function getToday() { return getLocalDate(); }
+        function getYesterday() { const d = new Date(Date.now() + UTC_OFFSET_HOURS*3600000 - 86400000); return d.toISOString().slice(0,10); }
+        function randInt(max) { return Math.floor(Math.random()*max); }
+        function randChoice(arr) { return arr[randInt(arr.length)]; }
+        function clamp(v,lo,hi) { return Math.max(lo, Math.min(hi, v)); }
+        // 统一格式化当前时刻（ Asia/Shanghai ），用于日志时间戳
+        function nowTimeStr() {
+            return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+        }
+        // 将一条日志压入旅行者日志，并保持长度不超过 10
+        function pushTravelerLog(entry) {
+            travelerState.log.push(entry);
+            if (travelerState.log.length > 10) travelerState.log = travelerState.log.slice(-10);
+        }
+
+        const LS_KEYS = { userData:'kaka_user_data', traveler:'kaka_traveler_state', adventure:'kaka_adventure_state' };
+        function loadJSON(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch(e) { return fallback; } }
+        function saveJSON(key, data) { try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {} }
+
+        let userData = loadJSON(LS_KEYS.userData, {
+            checkins: {}, cards: [], lastDailyDraw: null, weeklyEggClaimed: null
+        });
+        let travelerState = loadJSON(LS_KEYS.traveler, {
+            temperature: -10, health: 80, hunger: 70, mood: 60,
+            backpack: [], log: [], lastUpdate: Date.now() / 1000,
+            tentLevel: 0, lastStreak: 0, tentCheckedDate: '',
+            weatherRate: { appliedAt: 0, temp: 1, mood: 1, health: 1, hunger: 1, currentWeather: '' }
+        });
+        // 帐篷系统初始化：兼容旧存档，根据已有连续天数直接设置帐篷等级
+        (function initTentOnUpgrade() {
+            if (travelerState.tentLevel === undefined) {
+                travelerState.tentLevel = 0;
+            }
+            if (travelerState.lastStreak === undefined) {
+                // 旧存档没有 lastStreak，根据当前连续天数初始化
+                const currentStreak = calcStats().streak;
+                travelerState.lastStreak = currentStreak;
+                
+                // 根据当前连续天数设置帐篷等级
+                let highestLevel = 0;
+                for (let i = 0; i < TENT_LEVELS.length; i++) {
+                    if (currentStreak >= TENT_LEVELS[i].days) {
+                        highestLevel = i + 1;
+                    }
+                }
+                if (highestLevel > 0 && travelerState.tentLevel < highestLevel) {
+                    travelerState.tentLevel = highestLevel;
+                    const tentInfo = TENT_LEVELS[highestLevel - 1];
+                    pushTravelerLog(`${nowTimeStr()} ⛺ 你之前的努力没有白费——${tentInfo.log}`);
+                    forceSaveAll();
+                }
+            }
+        })();
+        let adventureState = loadJSON(LS_KEYS.adventure, {
+            weather: '晴朗', event: '旅行者正在雪原上跋涉，四周一片寂静，只有风声相伴。', updatedAt: 0
+        });
+        // ==================== 脏标记优化 ====================
+        let isDirty = false;
+
+        let lastSavedTraveler = {
+            temperature: travelerState.temperature || -10,
+            health: travelerState.health || 80,
+            hunger: travelerState.hunger || 70,
+            mood: travelerState.mood || 60,
+            tentLevel: travelerState.tentLevel || 0
+        };
+        let dreamTriggered = false;      // 防止重复触发
+        let dreamClickCount = 0;         // 继续沉睡点击次数
+        const DREAM_MAX_CLICKS = 5;      // 出现醒来按钮所需点击数
+        let dreamPetalInterval = null;   // 保存花瓣生成定时器，便于停止
+
+        function markDirty() {
+            isDirty = true;
+        }
+        // 显示梦境覆盖层
+        function showDream() {
+            if (dreamTriggered) return;
+            dreamTriggered = true;
+            const overlay = document.getElementById('dreamOverlay');
+            if (!overlay) return;
+            overlay.style.display = 'flex';
+            overlay.classList.add('active');
+            dreamClickCount = 0;
+            const wakeBtn = document.getElementById('dreamBtnWake');
+            if (wakeBtn) {
+                wakeBtn.classList.remove('show');   // 移除显示类，初始状态隐藏
+            }
+            // 启动花瓣
+            startDreamPetals();
+            // 绑定按钮事件（使用全局函数，已在 window 上暴露）
+        }
+
+        // 隐藏梦境覆盖层（醒来）
+        function hideDream() {
+            const overlay = document.getElementById('dreamOverlay');
+            if (!overlay) return;
+            // 停止花瓣
+            stopDreamPetals();
+            // 渐暗效果
+            document.getElementById('dreamDarkOverlay').classList.add('active');
+            overlay.classList.add('fading');
+            // 恢复旅行者状态
+            travelerState.health = clamp(travelerState.health + 25, 0, 100);
+            travelerState.mood = clamp(travelerState.mood + 10, 0, 100);
+            pushTravelerLog(`${nowTimeStr()} 🌬️ 旅行者从濒死边缘醒来，暴风雪仍在咆哮。`);
+            // 解锁梦境回响主题
+            unlockTheme('dreamecho');
+            forceSaveAll();
+            // 延迟移除覆盖层，配合动画
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                overlay.classList.remove('fading');
+                document.getElementById('dreamDarkOverlay').classList.remove('active');
+                dreamTriggered = false; // 允许再次触发（如果你希望再次濒死时弹出）
+            }, 2500);
+        }
+
+        // 处理“继续沉睡”点击
+        function handleDreamSleep() {
+            dreamClickCount++;
+            // 随机呼喊
+            const shouts = [
+                '队长！！',
+                '小周！别睡！',
+                '你答应过要回来的……',
+                '不要一个人……',
+                '快醒醒！',
+                '我们找到补给箱了！',
+                '极光下面等你！',
+                '暴风雪要来了……',
+                '冰层要裂了！！',
+                '起来啊……求你了',
+            ];
+            const layer = document.getElementById('dreamShoutLayer');
+            let text;
+            if (dreamClickCount >= 20) {
+                text = '这是哪里？';
+            } else {
+                text = shouts[Math.floor(Math.random() * shouts.length)];
+            }
+            const el = document.createElement('div');
+            el.className = 'shout-text';
+            el.textContent = text;
+            el.style.top = (15 + Math.random() * 50) + '%';
+            el.style.left = (20 + Math.random() * 60) + '%';
+            layer.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 2400);
+
+            if (dreamClickCount >= DREAM_MAX_CLICKS) {
+                const wakeBtn = document.getElementById('dreamBtnWake');
+                if (wakeBtn) wakeBtn.classList.add('show');
+            }
+        }
+
+        function startDreamPetals() {
+            const container = document.getElementById('dreamPetals');
+            if (!container) return;
+            const petalElements = [
+                '🌸','💮','🏵️',
+                '🍀','🌿','🍃','☘️',
+                '🍂','🍁',
+                '🪷','🌸','🍀','🌿'
+            ];
+        function createPetal() {
+            const petal = document.createElement('span');
+            petal.className = 'petal';
+            petal.textContent = petalElements[Math.floor(Math.random() * petalElements.length)];
+            petal.style.left = Math.random() * 100 + '%';
+            petal.style.fontSize = (0.7 + Math.random() * 1.6) + 'rem';
+            petal.style.animationDuration = (7 + Math.random() * 16) + 's';
+            petal.style.animationDelay = Math.random() * 4 + 's';
+            container.appendChild(petal);
+            const totalDuration = (parseFloat(petal.style.animationDuration) + parseFloat(petal.style.animationDelay)) * 1000 + 2000;
+            setTimeout(() => { if (petal.parentNode) petal.remove(); }, totalDuration);
+        }
+        for (let i = 0; i < 35; i++) {
+            setTimeout(createPetal, i * 180);
+        }
+        dreamPetalInterval = setInterval(createPetal, 1400);
+    }
+
+        function stopDreamPetals() {
+            if (dreamPetalInterval) {
+                clearInterval(dreamPetalInterval);
+                dreamPetalInterval = null;
+            }
+            const container = document.getElementById('dreamPetals');
+            if (container) container.innerHTML = ''; // 清空花瓣
+        }
+            // ==================== 背景主题切换（支持解锁） ====================
+        const ALL_THEMES = ['classic', 'ember', 'twilight', 'bloodmoon', 'dreamecho'];
+        const THEME_NAMES = {
+            classic: '经典极光蓝',
+            ember: '余烬暖橙',
+            twilight: '暮紫极光',
+            bloodmoon: '血月残象',
+            dreamecho: '梦境回响'
+        };
+
+        // 从 localStorage 读取已解锁主题列表，默认解锁前三个
+        let unlockedThemes = JSON.parse(localStorage.getItem('kaka_unlocked_themes')) || ['classic', 'ember', 'twilight'];
+        let currentTheme = localStorage.getItem('kaka_theme') || 'classic';
+
+        function saveUnlockedThemes() {
+            localStorage.setItem('kaka_unlocked_themes', JSON.stringify(unlockedThemes));
+        }
+
+        function applyTheme(theme) {
+            // 如果尝试应用未解锁的主题，忽略
+            if (!unlockedThemes.includes(theme)) return;
+            
+            // 移除所有主题类
+            ALL_THEMES.forEach(t => document.body.classList.remove('theme-' + t));
+            // 添加当前主题类
+            document.body.classList.add('theme-' + theme);
+            currentTheme = theme;
+            localStorage.setItem('kaka_theme', theme);
+        }
+
+        function cycleTheme() {
+            // 只在已解锁的主题之间循环
+            const currentIndex = unlockedThemes.indexOf(currentTheme);
+            const nextIndex = (currentIndex + 1) % unlockedThemes.length;
+            const nextTheme = unlockedThemes[nextIndex];
+            applyTheme(nextTheme);
+            showToast('🎨 主题已切换至：' + THEME_NAMES[nextTheme], 2000);
+        }
+
+        // 解锁新主题
+        function unlockTheme(theme) {
+            if (!unlockedThemes.includes(theme)) {
+                unlockedThemes.push(theme);
+                saveUnlockedThemes();
+                showToast('🔓 新主题已解锁：' + THEME_NAMES[theme], 3000);
+            }
+        }
+
+        function forceSaveAll() {
+            saveJSON(LS_KEYS.userData, userData);
+            saveJSON(LS_KEYS.traveler, travelerState);
+            saveJSON(LS_KEYS.adventure, adventureState);
+            // 更新缓存
+            lastSavedTraveler = {
+            temperature: travelerState.temperature || -10,
+            health: travelerState.health || 80,
+            hunger: travelerState.hunger || 70,
+            mood: travelerState.mood || 60,
+            tentLevel: travelerState.tentLevel || 0
+        };
+            isDirty = false;
+        }
+        // 存档迁移：补全旧版本缺少的字段
+        function migrateSaveData() {
+            // travelerState 补全
+            if (travelerState.tentLevel === undefined) travelerState.tentLevel = 0;
+            if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
+            if (!travelerState.backpack) travelerState.backpack = [];
+            if (!travelerState.log) travelerState.log = [];
+
+            // userData 补全
+            if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
+            if (!userData.lastDailyDraw && userData.lastDailyDraw !== null) userData.lastDailyDraw = null;
+        }
+
+        // ==================== 物品查询与堆叠 ====================
+        function getItemByName(name) {
+            for (const pool of Object.values(CARD_POOL)) for (const item of pool) if (item[0] === name) return item;
+            for (const pool of Object.values(DROP_POOL)) for (const item of pool) if (item[0] === name) return item;
+            // 新增：搜索求生破烂池
+            for (const item of SURVIVAL_SCRAPS) if (item[0] === name) return item;
+            return null;
+        }
+        function getTravelerUseText(name) { const i = getItemByName(name); return i ? i[3] : null; }
+        function getItemEffect(name) { const i = getItemByName(name); return i ? i[5] : null; }
+        function getItemCategory(name) { const i = getItemByName(name); return i ? i[4] : null; }
+        function getCardRarity(name) {
+            for (const [r, pool] of Object.entries(CARD_POOL)) for (const item of pool) if (item[0] === name) return r;
+            for (const [r, pool] of Object.entries(DROP_POOL)) for (const item of pool) if (item[0] === name) return r;
+            return '普通';
+        }
+
+        function addUserItem(name, desc, count = 1) {
+            if (count <= 0) return;
+            const existing = userData.cards.find(c => c[0] === name);
+            if (existing) {
+                existing[2] = (existing[2] || 1) + count;
+            } else {
+                userData.cards.push([name, desc, count]);
+            }
+        }
+        function removeUserItem(name, count = 1) {
+            const idx = userData.cards.findIndex(c => c[0] === name);
+            if (idx === -1) return false;
+            const item = userData.cards[idx];
+            if (item[2] > count) {
+                item[2] -= count;
+            } else {
+                userData.cards.splice(idx, 1);
+            }
+            return true;
+        }
+        function getAllOwnedNames() {
+            const names = new Set();
+            userData.cards.forEach(c => names.add(c[0]));
+            travelerState.backpack.forEach(([name]) => names.add(name));
+            return names;
+        }
+        
+        // ==================== 旅行者状态 ====================
+        function updateTravelerState(nowSec = Date.now()/1000) {
+            const elapsed = nowSec - (travelerState.lastUpdate || nowSec);
+            const hours = Math.min(elapsed / 3600, MAX_OFFLINE_HOURS);
+            if (hours <= 0) return;
+
+            // 帐篷减免比例
+            const tentReduction = (travelerState.tentLevel > 0 && travelerState.tentLevel <= TENT_LEVELS.length)
+                ? TENT_LEVELS[travelerState.tentLevel - 1].reduction
+                : 0;
+
+            // 天气衰减倍率
+            const weatherName = adventureState.weather || '晴朗';
+            const wRate = WEATHER_RATES[weatherName] || { temp: 1, mood: 1, health: 1, hunger: 1 };
+            const wr = {
+                temp: wRate.temp ?? 1,
+                mood: wRate.mood ?? 1,
+                health: wRate.health ?? 1,
+                hunger: wRate.hunger ?? 1
+            };
+
+            // 自然衰减（应用帐篷减免 + 天气倍率）
+            travelerState.temperature = Math.max(-30, travelerState.temperature - hours * 1 * (1 - tentReduction) * wr.temp);
+            travelerState.mood        = Math.max(0,   travelerState.mood        - hours * 2 * (1 - tentReduction * 0.5) * wr.mood);
+            travelerState.hunger      = Math.max(0,   travelerState.hunger      - hours * 5 * (1 - tentReduction * 0.3) * wr.hunger);
+
+            // 帐篷对健康有间接保护
+            travelerState.health = Math.max(0, travelerState.health - hours * (tentReduction >= 0.8 ? 0.3 : tentReduction >= 0.4 ? 0.6 : 1.0) * wr.health);
+
+            // 饱腹过低额外扣血
+            if (travelerState.hunger < 10) {
+                travelerState.health = Math.max(0, travelerState.health - hours * 2);
+            }
+
+            // 专注奖励（在线且今日专注 ≥120 分钟）
+            const todayStats = calcStats(getToday());
+            const todayFocus = todayStats.totalDurationToday;
+            const isOnline = elapsed < 600; // 10分钟内视为在线
+            if (todayFocus >= 120 && isOnline) {
+                travelerState.temperature = Math.min(10,  travelerState.temperature + hours * 0.6);
+                travelerState.mood        = Math.min(100, travelerState.mood        + hours * 1.6);
+                travelerState.hunger      = Math.min(100, travelerState.hunger      + hours * 3.2);
+                travelerState.health      = Math.min(100, travelerState.health      + hours * 0.8);
+            }
+
+            // 钳制数值
+            travelerState.temperature = clamp(travelerState.temperature, -30, 10);
+            travelerState.health      = clamp(travelerState.health,      0, 100);
+            travelerState.hunger      = clamp(travelerState.hunger,      0, 100);
+            travelerState.mood        = clamp(travelerState.mood,        0, 100);
+
+            // 离线使用背包物品
+            if (hours > 0.5) {
+                const usageCycles = Math.floor(hours);
+                for (let i = 0; i < usageCycles; i++) {
+                    autoUseBackpackItem();
+                    if (travelerState.backpack.length === 0) break;
+                }
+            }
+
+            // 帐篷升级/降级
+            const todayStr = getToday();
+            if (todayStr !== (travelerState.tentCheckedDate || '')) {
+                const currentStreak = calcStats().streak;
+                // 根据当前连续天数重新计算帐篷等级（支持平滑升降）
+                let newLevel = 0;
+                for (let i = TENT_LEVELS.length - 1; i >= 0; i--) {
+                    if (currentStreak >= TENT_LEVELS[i].days) {
+                        newLevel = i + 1;
+                        break;
+                    }
+                }
+                const oldLevel = travelerState.tentLevel || 0;
+                if (newLevel > oldLevel) {
+                    travelerState.tentLevel = newLevel;
+                    pushTravelerLog(`${nowTimeStr()} ⛺ ${TENT_LEVELS[newLevel - 1].log}`);
+                } else if (newLevel < oldLevel && newLevel === 0) {
+                    travelerState.tentLevel = 0;
+                    pushTravelerLog(`${nowTimeStr()} 🏕️ 连续天数减少，帐篷已被风雪摧毁。`);
+                } else if (newLevel < oldLevel) {
+                    travelerState.tentLevel = newLevel;
+                    pushTravelerLog(`${nowTimeStr()} 🏕️ 连续天数减少，帐篷降级至「${TENT_LEVELS[newLevel - 1].name}」。`);
+                }
+                travelerState.lastStreak = currentStreak;
+                travelerState.tentCheckedDate = todayStr;
+            }
+
+            // 脏标记
+            const dTemp = Math.abs(travelerState.temperature - lastSavedTraveler.temperature);
+            const dHealth = Math.abs(travelerState.health - lastSavedTraveler.health);
+            const dHunger = Math.abs(travelerState.hunger - lastSavedTraveler.hunger);
+            const dMood = Math.abs(travelerState.mood - lastSavedTraveler.mood);
+            const dTent = Math.abs(travelerState.tentLevel - lastSavedTraveler.tentLevel);
+            if (dTemp >= 2 || dHealth >= 2 || dHunger >= 3 || dMood >= 3 || dTent >= 1) {
+                markDirty();
+            }
+            travelerState.lastUpdate = nowSec;
+        }
+
+        function applyEffect(effect) {
+            if (effect.health) travelerState.health = clamp(travelerState.health + effect.health, 0, 100);
+            if (effect.hunger) travelerState.hunger = clamp(travelerState.hunger + effect.hunger, 0, 100);
+            if (effect.mood) travelerState.mood = clamp(travelerState.mood + effect.mood, 0, 100);
+            if (effect.temp) travelerState.temperature = clamp(travelerState.temperature + effect.temp, -30, 10);
+
+            // 饱腹过低导致的生命衰减（每8秒损失1点，离线由 updateTravelerState 中的 self-sustain 来模拟）
+            if (travelerState.hunger < 20) {
+                travelerState.health = clamp(travelerState.health - 1, 0, 100);
+            }
+        }
+        function formatEffects(effects) {
+            const emoji = { health: '❤️', hunger: '🍞', mood: '😊', temp: '🌡️' };
+            const parts = [];
+            for (const key of ['health', 'hunger', 'mood', 'temp']) {
+                const val = effects[key];
+                if (val) parts.push(`${emoji[key]}${val > 0 ? '+' + val : val}`);
+            }
+            return parts.join(' ');
+        }
+
+        function autoUseBackpackItem() {
+            const bp = travelerState.backpack;
+            if (!bp.length) return null;
+
+            const needs = [
+                { stat: 'hunger', threshold: 20, category: 'food' },
+                { stat: 'health', threshold: 30, category: 'medical' },
+                { stat: 'temperature', threshold: -15, category: 'warm' },
+                { stat: 'mood', threshold: 20, category: 'support' },
+            ];
+
+            for (const need of needs) {
+                if (travelerState[need.stat] < need.threshold) {
+                    const idx = bp.findIndex(([name]) => getItemCategory(name) === need.category);
+                    if (idx === -1) continue;
+
+                    const item = bp[idx];
+                    const itemName = item[0];
+                    const durability = item[2] || 1;
+                    const effect = getItemEffect(itemName);
+
+                    // 耐久物品处理
+                    if (effect?.durability !== undefined) {
+                        if (Math.random() < 0.3) {
+                            const newDurability = durability - 1;
+                            const useEffect = effect.onUse || {};
+                            if (Object.keys(useEffect).length > 0) {
+                                applyEffect(useEffect);
+                            } else {
+                                ['hunger','health','temp','mood'].forEach(k => {
+                                    if (effect[k] !== undefined) applyEffect({[k]: effect[k]});
+                                });
+                            }
+                            const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
+                            pushTravelerLog(`${nowTimeStr()} ${useText}（剩余耐久：${newDurability}）`);
+                            if (newDurability <= 0) {
+                                bp.splice(idx, 1);
+                            } else {
+                                bp[idx] = [itemName, item[1], newDurability];
+                            }
+                            return useText;
+                        } else {
+                            continue;
+                        }
+                    }
+                    // 一次性物品处理
+                    else {
+                        if (effect) applyEffect(effect);
+                        const useText = getTravelerUseText(itemName) || `旅行者使用了${itemName}。`;
+                        pushTravelerLog(`${nowTimeStr()} ${useText}`);
+                        bp.splice(idx, 1);
+                        return useText;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // ==================== 冒险 ====================
+        function refreshAdventure() {
+            const nowSec = Date.now() / 1000;
+            updateTravelerState(nowSec);
+            // 解锁血月残象主题
+            if (travelerState.health <= 10 && !unlockedThemes.includes('bloodmoon')) {
+                unlockTheme('bloodmoon');
+            }            
+
+            const isExtreme =
+                travelerState.hunger <= 8 ||
+                travelerState.mood <= 8 ||
+                travelerState.health <= 18 ||
+                travelerState.temperature <= -28;
+
+            let eventObj;
+            if (isExtreme) {
+                const candidates = [];
+                if (travelerState.hunger <= 8) candidates.push('hunger');
+                if (travelerState.mood <= 8) candidates.push('mood');
+                if (travelerState.health <= 18) candidates.push('health');
+                
+                if (travelerState.temperature <= -28) candidates.push('temp');
+                const type = candidates[Math.floor(Math.random() * candidates.length)];
+                eventObj = EXTREME_EVENTS[type] ? randChoice(EXTREME_EVENTS[type]) : randChoice(EVENT_POOL);
+            } else {
+                eventObj = randChoice(EVENT_POOL);
+            }
+
+            // 极端事件仅展示文本，不扣除数值
+            if (!isExtreme) {
+                applyEffect(eventObj.effects);
+            }
+
+            // 记录日志
+            const timeStr = nowTimeStr();
+            if (isExtreme) {
+                // 极端状态：只记录通用文本，不显示具体效果
+                pushTravelerLog(`${timeStr} ⚠️旅行者陷入了绝境，正在艰难挣扎。`);
+            } else {
+                // 普通事件：正常显示效果数值
+                const effectStr = formatEffects(eventObj.effects);
+                if (effectStr) {
+                    pushTravelerLog(`${timeStr} 事件：${effectStr}`);
+                }
+            }
+
+           // 天气变化更新飘雪
+            const newWeather = randChoice(WEATHERS);
+            if (newWeather !== adventureState.weather) {
+                initSnowfall(newWeather);
+            }
+
+            // 设置冒险状态（不再包含数值变化）
+            adventureState = {
+                weather: newWeather,
+                event: eventObj.text,
+                updatedAt: nowSec,
+            };
+            forceSaveAll();
+        }
+
+        function getAdventureReport() {
+            const nowSec = Date.now() / 1000;
+            updateTravelerState(nowSec);
+            if (!adventureState.updatedAt || nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) {
+                refreshAdventure();
+                    }
+                    return {
+                        weather: adventureState.weather,
+                        event: adventureState.event,
+                        updatedAt: adventureState.updatedAt,
+                        traveler: { ...travelerState },
+                    };
+                }
+
+        // ==================== 打卡与统计 ====================
+        function addCheckin(task, duration) {
+            const today = getToday();
+            userData.checkins[today] = userData.checkins[today] || [];
+            userData.checkins[today].push({
+                timestamp: Math.floor(Date.now() / 1000),
+                task: task || '通用',
+                done: true,
+                duration: duration || null,
+            });
+            forceSaveAll();
+        }
+
+        function clearTodayCheckins(taskName = null) {
+            const today = getToday();
+            if (!userData.checkins[today]) return 0;
+            if (taskName) {
+                const before = userData.checkins[today].length;
+                userData.checkins[today] = userData.checkins[today].filter(e => e.task !== taskName);
+                return before - userData.checkins[today].length;
+            } else {
+                const cnt = userData.checkins[today].length;
+                delete userData.checkins[today];
+                return cnt;
+            }
+        }
+        // 根据时间戳删除单条打卡记录
+        function removeCheckinByTimestamp(timestamp) {
+            const today = getToday();
+            if (!userData.checkins[today]) return false;
+            const before = userData.checkins[today].length;
+            userData.checkins[today] = userData.checkins[today].filter(e => e.timestamp !== timestamp);
+            const changed = userData.checkins[today].length < before;
+            if (changed) {
+                if (userData.checkins[today].length === 0) delete userData.checkins[today];
+                forceSaveAll();
+            }
+            return changed;
+        }
+
+        // 更新指定记录的任务名称
+        function updateCheckinTask(timestamp, newTask) {
+            const today = getToday();
+            if (!userData.checkins[today]) return false;
+            const entry = userData.checkins[today].find(e => e.timestamp === timestamp);
+            if (entry) {
+                entry.task = newTask;
+                forceSaveAll();
+                return true;
+            }
+            return false;
+        }
+        function calcStats(filterDate = null) {
+            const days = Object.keys(userData.checkins).sort();
+            if (!days.length) return { total: 0, streak: 0, tasks: {}, totalDurationToday: 0 };
+            const today = getToday(), yesterday = getYesterday();
+            const dateSet = new Set(days);
+            let streak = 0, d = yesterday;
+            while (dateSet.has(d)) {
+                streak++;
+                d = new Date(new Date(d + 'T00:00:00+08:00').getTime() - 86400000).toISOString().slice(0, 10);
+            }
+            if (dateSet.has(today)) streak++;
+            const tasks = {};
+            const entries = filterDate ? (userData.checkins[filterDate] || []) : Object.values(userData.checkins).flat();
+            for (const e of entries) {
+                tasks[e.task] = tasks[e.task] || { count: 0, totalDuration: 0 };
+                tasks[e.task].count++;
+                if (e.duration != null) tasks[e.task].totalDuration += e.duration;
+            }
+            let totalDurationToday = 0;
+            if (filterDate === getToday()) {
+                totalDurationToday = (userData.checkins[getToday()] || []).reduce((s, e) => s + (e.duration || 0), 0);
+            }
+            return { total: days.length, streak, tasks, totalDurationToday };
+        }
+
+        // ==================== 抽卡与掉落 ====================
+        function drawCard(ownedNames, preferRarity = null) {
+            const allAvailable = [];
+            for (const [rarity, pool] of Object.entries(CARD_POOL))
+                for (const item of pool)
+                    if (!ownedNames.has(item[0])) allAvailable.push({ name: item[0], desc: item[1], rarity });
+            if (!allAvailable.length) return null;
+            if (preferRarity) {
+                const candidates = allAvailable.filter(c => c.rarity === preferRarity);
+                if (candidates.length) return randChoice(candidates);
+            }
+            return randChoice(allAvailable);
+        }
+
+        function drawByProbability(ownedNames) {
+            const r = Math.random();
+            const prefer = r >= 0.95 ? '传说' : r >= 0.7 ? '稀有' : '普通';
+            return drawCard(ownedNames, prefer);
+        }
+
+        function processDailyDraw() {
+            const today = getToday();
+            if (!(today in userData.checkins)) return null; // 今日无打卡
+
+            const streak = calcStats().streak;
+            const ownedNames = getAllOwnedNames();
+
+            // 检查今天是否已抽过每日卡
+            if (userData.lastDailyDraw === today && userData.weeklyEggClaimed !== today && streak >= 7) {
+                // 今日已抽过卡，但连续7天彩蛋未领 → 允许抽彩蛋
+            } else if (userData.lastDailyDraw === today) {
+                return null; // 今天已经抽过卡，且无彩蛋可领
+            }
+
+            let card, isExtra = false;
+            if (streak >= 7 && userData.weeklyEggClaimed !== today) {
+                isExtra = true;
+                card = drawCard(ownedNames, '传说');
+                if (card) userData.weeklyEggClaimed = today;
+            } else {
+                card = drawByProbability(ownedNames);
+            }
+
+            if (card) {
+                addUserItem(card.name, card.desc, 1);
+                userData.lastDailyDraw = today;
+                forceSaveAll();
+                return { name: card.name, desc: card.desc, isExtra };
+            } else {
+                userData.lastDailyDraw = today; // 防止无卡可抽时仍能无限抽
+                forceSaveAll();
+                return null;
+            }
+        }
+
+    
+
+        // ==================== 番茄钟模块 ====================
+
+        let currentTomatoDrops = []; // 存储本次掉落的物品 { name, rarity }
+        let tomatoState = {
+            totalSeconds: 25 * 60,
+            remainingSeconds: 25 * 60,
+            elapsedFocusSeconds: 0,
+            status: 'idle',
+            intervalId: null,
+            lastTickTime: null,
+            taskName: '番茄钟专注',
+            mode: 'countdown' , // 新增：'countdown' 倒计时 / 'stopwatch' 正计时
+            startTime: 0 
+        };
+
+        function formatTomatoTime(sec, mode) {
+            if (mode === 'stopwatch') {
+                // 正计时：显示已用时间 MM:SS
+                const m = Math.floor(sec / 60);
+                const s = Math.floor(sec % 60);
+                return '+' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            } else {
+                // 倒计时：显示剩余时间
+                const m = Math.floor(Math.max(0, sec) / 60);
+                const s = Math.floor(Math.max(0, sec) % 60);
+                return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
+        }
+
+        function updateTomatoUI() {
+            const display = document.getElementById('tomatoDisplay');
+            const startBtn = document.getElementById('btnTomatoStart');
+            const modeBtn = document.getElementById('btnTomatoMode');
+
+            if (display) {
+                if (tomatoState.mode === 'stopwatch') {
+                    display.textContent = formatTomatoTime(tomatoState.elapsedFocusSeconds, 'stopwatch');
+                } else {
+                    display.textContent = formatTomatoTime(tomatoState.remainingSeconds, 'countdown');
+                }
+            }
+
+            if (startBtn) {
+                if (tomatoState.status === 'running') {
+                    startBtn.textContent = '⏸ 暂停';
+                    startBtn.className = 'btn btn-outline btn-sm';
+                } else {
+                    startBtn.textContent = '▶ 开始';
+                    startBtn.className = 'btn btn-primary btn-sm';
+                }
+            }
+
+            if (modeBtn) {
+                modeBtn.textContent = tomatoState.mode === 'countdown' ? '⏱ 正计时' : '⏳ 倒计时';
+            }
+
+            const stopBtn = document.getElementById('btnTomatoStop');
+            if (stopBtn) stopBtn.disabled = (tomatoState.status === 'idle');
+            // 更新网页标题
+            const timeStr = tomatoState.mode === 'stopwatch'
+                ? formatTomatoTime(tomatoState.elapsedFocusSeconds, 'stopwatch')
+                : formatTomatoTime(tomatoState.remainingSeconds, 'countdown');
+            document.title = `${timeStr} - 卡卡查克 · 雪原冒险`;
+        }
+
+        function startTomato() {
+            if (tomatoState.status === 'running') {
+                pauseTomato();
+                return;
+            }
+            if (tomatoState.status === 'idle') {
+                // 全新开始
+                tomatoState.status = 'running';
+                tomatoState.startTime = Date.now();
+                tomatoState.elapsedFocusSeconds = 0;
+                tomatoState.remainingSeconds = tomatoState.totalSeconds;
+            } else if (tomatoState.status === 'paused') {
+                // 从暂停恢复：调整 startTime 以保持累计
+                tomatoState.status = 'running';
+                const now = Date.now();
+                if (tomatoState.mode === 'countdown') {
+                    const accumulated = tomatoState.totalSeconds - tomatoState.remainingSeconds;
+                    tomatoState.startTime = now - (accumulated * 1000);
+                } else {
+                    tomatoState.startTime = now - (tomatoState.elapsedFocusSeconds * 1000);
+                }
+            }
+            if (!tomatoState.intervalId) {
+                tomatoState.intervalId = setInterval(tickTomato, 1000);
+            }
+            scheduleTomatoCompletion();
+            updateTomatoUI();
+        }
+
+        function pauseTomato() {
+            if (tomatoState.status === 'running') {
+                const now = Date.now();
+                const delta = (now - tomatoState.startTime) / 1000;
+                if (tomatoState.mode === 'stopwatch') {
+                    tomatoState.elapsedFocusSeconds += delta;
+                } else {
+                    tomatoState.remainingSeconds = Math.max(0, tomatoState.totalSeconds - (tomatoState.elapsedFocusSeconds + delta));
+                    tomatoState.elapsedFocusSeconds += delta;
+                }
+                tomatoState.status = 'paused';
+                clearInterval(tomatoState.intervalId);
+                tomatoState.intervalId = null;
+                clearTomatoCompletion();
+                updateTomatoUI();
+            }
+        }
+
+        function stopTomato(record = true) {
+            if (tomatoState.status === 'idle') return;
+
+            // 计算实际专注秒数
+            let realElapsed = 0;
+            if (tomatoState.status === 'running') {
+                const now = Date.now();
+                if (tomatoState.mode === 'stopwatch') {
+                    realElapsed = tomatoState.elapsedFocusSeconds + (now - tomatoState.startTime) / 1000;
+                } else {
+                    const previousElapsed = tomatoState.totalSeconds - tomatoState.remainingSeconds;
+                    realElapsed = previousElapsed + (now - tomatoState.startTime) / 1000;
+                }
+            } else if (tomatoState.status === 'paused') {
+                realElapsed = tomatoState.elapsedFocusSeconds;
+            }
+
+            
+
+            if (record && realElapsed >= 60) {
+                const minutes = Math.floor(realElapsed / 60);
+                addCheckin(tomatoState.taskName || '番茄钟专注', minutes);
+                let msg = `✅ 番茄钟完成！已记录 ${minutes} 分钟专注。`;
+
+                // 清空上次记录，准备装新掉落
+                currentTomatoDrops = [];
+
+                // ---------- 掉落逻辑 ----------
+                if (minutes >= 15) {                // 正式版用 15，测试可改为 1
+                    const slotCount = Math.min(Math.floor(minutes / 30) + 1, 4);
+                    for (let i = 0; i < slotCount; i++) {
+                        let preferRarity = '普通';
+                        if (minutes >= 45) {
+                            const rand = Math.random();
+                            if (rand < 0.1) preferRarity = '传说';
+                            else if (rand < 0.3) preferRarity = '稀有';
+                        }
+
+                        if (preferRarity === '普通') {
+                            const item = dropCommonItem();
+                            if (item) {
+                                currentTomatoDrops.push({ name: item[0], rarity: '普通' });
+                                msg += ' 🎒 获得【' + item[0] + '】';
+                            }
+                        } else {
+                            const item = dropRareOrLegendaryItem(preferRarity);
+                            if (item) {
+                                currentTomatoDrops.push({ name: item[0], rarity: preferRarity });
+                                msg += ' 🎒 获得【' + item[0] + '】';
+                            } else {
+                                // 池空降级为普通
+                                const commonItem = dropCommonItem();
+                                if (commonItem) {
+                                    currentTomatoDrops.push({ name: commonItem[0], rarity: '普通（' + preferRarity + '池空）' });
+                                    msg += ' 🎒 获得【' + commonItem[0] + '】（' + preferRarity + '池已空）';
+                                }
+                            }
+                        }
+                    }
+                }
+
+                showToast(msg, 4000);
+                forceSaveAll();
+                renderPanel('checkin');   // 重新渲染打卡面板（会用到 currentTomatoDrops）
+                updateTravelerBar();
+            } else if (record && realElapsed < 60) {
+                showToast('⚠️ 专注时间不足1分钟，未记录打卡。', 2500);
+            }
+
+            // 清理计时器，重置番茄钟状态
+            if (tomatoState.intervalId) {
+                clearInterval(tomatoState.intervalId);
+                tomatoState.intervalId = null;
+            }
+            clearTomatoCompletion();
+            tomatoState.status = 'idle';
+            tomatoState.elapsedFocusSeconds = 0;
+            tomatoState.remainingSeconds = tomatoState.totalSeconds;
+            updateTomatoUI();
+        }
+
+        function tickTomato() {
+            if (tomatoState.status !== 'running') return;
+            const now = Date.now();
+            const totalElapsed = (now - tomatoState.startTime) / 1000;
+
+            if (tomatoState.mode === 'stopwatch') {
+                tomatoState.elapsedFocusSeconds = totalElapsed;
+            } else {
+                const remaining = tomatoState.totalSeconds - totalElapsed;
+                tomatoState.elapsedFocusSeconds = totalElapsed;
+                if (remaining <= 0) {
+                    tomatoState.remainingSeconds = 0;
+                    stopTomato(true);
+                    return;
+                }
+                tomatoState.remainingSeconds = remaining;
+            }
+            updateTomatoUI();
+        }
+
+        // ---- 后台/可见性补偿 ----
+        // 记录一次性"到点完成"定时器（后台比逐秒 setInterval 更可靠触发）
+        let tomatoCompletionTimer = null;
+        function scheduleTomatoCompletion() {
+            clearTimeout(tomatoCompletionTimer);
+            tomatoCompletionTimer = null;
+            // 仅倒计时运行时需要到点完成
+            if (tomatoState.status !== 'running' || tomatoState.mode !== 'countdown') return;
+            const endMs = tomatoState.startTime + tomatoState.totalSeconds * 1000;
+            const delay = endMs - Date.now();
+            if (delay <= 0) return; // 已到点，交给 tickTomato 处理
+            tomatoCompletionTimer = setTimeout(() => {
+                if (tomatoState.status === 'running') tickTomato();
+            }, delay + 50);
+        }
+        function clearTomatoCompletion() {
+            if (tomatoCompletionTimer) {
+                clearTimeout(tomatoCompletionTimer);
+                tomatoCompletionTimer = null;
+            }
+        }
+        // 回到页面时，按真实已过时间立即校正/完成（避免只在切回时才结束）
+        function reconcileTomato() {
+            if (tomatoState.status === 'running') tickTomato();
+        }
+
+        function setTomatoPreset(minutes) {
+            if (tomatoState.status !== 'idle') return;
+            tomatoState.totalSeconds = minutes * 60;
+            tomatoState.remainingSeconds = minutes * 60;
+            tomatoState.mode = 'countdown';
+            updateTomatoUI();
+        }
+
+        function toggleTomatoMode() {
+            if (tomatoState.status !== 'idle') return;
+            tomatoState.mode = tomatoState.mode === 'countdown' ? 'stopwatch' : 'countdown';
+            if (tomatoState.mode === 'stopwatch') {
+                tomatoState.elapsedFocusSeconds = 0;
+                tomatoState.remainingSeconds = 0;
+            } else {
+                tomatoState.remainingSeconds = tomatoState.totalSeconds;
+                tomatoState.elapsedFocusSeconds = 0;
+            }
+            updateTomatoUI();
+        }
+
+        // ==================== 赠送 ====================
+        function giveToTraveler(name) {
+            if (travelerState.backpack.length >= 10) {
+                showToast('🎒 旅行者背包已满（最多10件），暂时无法接受新物品。');
+                return null;
+            }
+            // 获取物品使用文本（仍用于日志）
+            const useText = getTravelerUseText(name);
+            if (!useText) return null;
+            if (!removeUserItem(name, 1)) return null;
+            
+            travelerState.backpack.push([name, Date.now() / 1000, (getItemEffect(name)?.durability || 1)]);
+            
+            // 根据分类随机选择感谢语
+            const category = getItemCategory(name) || 'default';
+            const pool = THANKS_POOL[category] || THANKS_POOL.default;
+            const thanks = pool[Math.floor(Math.random() * pool.length)];
+            
+            forceSaveAll();
+            return `旅行者收下了${name}，${thanks}`;
+        }
+
+        // ==================== Toast ====================
+        function showToast(msg, duration = 2800) {
+            const container = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = 'toast';
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, duration + 500);
+        }
+
+        // ==================== 存档导入导出 ====================
+        function exportSave() {
+            const saveData = {
+                userData: userData,
+                travelerState: travelerState,
+                adventureState: adventureState,
+                exportTime: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kaka_save_${getToday()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📤 存档导出成功！');
+        }
+
+        function importSave(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.userData || !data.travelerState || !data.adventureState) {
+                        throw new Error('存档格式无效');
+                    }
+                    userData = data.userData;
+                    travelerState = data.travelerState;
+                    adventureState = data.adventureState;
+                    forceSaveAll();
+                    migrateSaveData(); 
+                    updateTravelerBar();
+                    const activeTab = document.querySelector('.tab-btn.active');
+                    if (activeTab) renderPanel(activeTab.dataset.tab);
+                    showToast('📥 存档导入成功！');
+                } catch (err) {
+                    showToast('⚠️ 存档文件无效，导入失败。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ==================== UI 渲染 ====================
+        function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function getWeatherScene(w) { const r = WEATHER_RATES[w]; return r ? r.scene : '天气状况未知，你小心地观察着四周。'; }
+        function getWeatherDesc(w) { return getWeatherScene(w); } // 向后兼容
+
+        function updateTravelerBar() {
+            migrateSaveData();
+            updateTravelerState(Date.now() / 1000);
+            const t = travelerState;
+            document.getElementById('tempVal').textContent = Math.round(t.temperature);
+            document.getElementById('healthVal').textContent = Math.round(t.health);
+            document.getElementById('hungerVal').textContent = Math.round(t.hunger);
+            document.getElementById('moodVal').textContent = Math.round(t.mood);
+            document.getElementById('tempBar').style.width = ((t.temperature + 30) / 40 * 100) + '%';
+            document.getElementById('healthBar').style.width = t.health + '%';
+            document.getElementById('hungerBar').style.width = t.hunger + '%';
+            document.getElementById('moodBar').style.width = t.mood + '%';
+            // 动态副标题：根据天气 + 时段变化
+            const hour = new Date().getHours();
+            const timeOfDay = hour < 6 ? '凌晨' : hour < 9 ? '清晨' : hour < 12 ? '上午' : hour < 14 ? '正午' : hour < 18 ? '下午' : hour < 22 ? '傍晚' : '深夜';
+            const weatherSub = adventureState.weather || '晴朗';
+            const subEl = document.getElementById('headerSubtitle');
+            const subTexts = {
+                '暴风雪': `🌪️ ${timeOfDay}的暴风雪像一头愤怒的巨兽，你只能弓着腰往前挪。`,
+                '晴朗':   `☀️ ${timeOfDay}的雪原格外明亮，阳光照在雪地上晃得人睁不开眼。`,
+                '极夜':   `🌌 现在是${timeOfDay}，但天永远是黑的——只有遥远星光陪着你。`,
+                '雾凇':   `🌿 ${timeOfDay}的雾凇像冰晶做的森林，你放轻了脚步，生怕惊扰这份宁静。`,
+                '冰雹':   `💥 ${timeOfDay}的冰雹砸得背包噼啪响，你只能抱着头一路小跑。`,
+                '小雪':   `❄️ ${timeOfDay}的小雪像柳絮一样飘着，世界安静得只剩自己的呼吸声。`,
+                '极光':   `🌈 ${timeOfDay}的极光在头顶流淌，你仰头看了好一会儿，几乎忘了赶路。`,
+                '冻雨':   `🥶 ${timeOfDay}的冻雨渗进衣领，你缩着脖子加快了脚步——冷得太真实了。`,
+                '白化天': `🌫️ ${timeOfDay}的白化天让你看不清三米外的路，只能凭着感觉深一脚浅一脚地走。`,
+                '钻石尘': `✨ ${timeOfDay}的钻石尘在阳光中闪烁，像是星星落在了人间。`
+            };
+            if (subEl && subTexts[weatherSub]) {
+                subEl.textContent = subTexts[weatherSub];
+            }
+
+            // 天气场景描述（含帐篷联动效果提示）
+            const weatherName = adventureState.weather || '晴朗';
+            const wRate = WEATHER_RATES[weatherName] || {};
+            const wScene = wRate.scene || '天空灰蒙蒙的，看不清远处的景象。';
+            const tentLevel = travelerState.tentLevel || 0;
+            const tentReduction = (tentLevel > 0 && tentLevel <= TENT_LEVELS.length) ? TENT_LEVELS[tentLevel - 1].reduction : 0;
+            const weatherEl = document.getElementById('weatherTag');
+            weatherEl.textContent = '☁️ ' + weatherName;
+            weatherEl.title = wScene
+                + (tentReduction > 0 ? '\n\n🏕️ ' + TENT_DISPLAY_NAMES[tentLevel] + ' 减免了 ' + Math.round(tentReduction * 100) + '% 的温度衰减。' : '');
+
+            // 在 updateTravelerBar 的末尾，加入以下代码（放在 } 之前）
+            if (travelerState.health <= 5 && !dreamTriggered) {
+                showDream();
+            }
+                // 更新帐篷图标与名称 + 悬停提示
+            const tentTag = document.getElementById('tentTag');
+            if (tentTag) {
+                const level = travelerState.tentLevel || 0;
+                if (level > 0 && level < TENT_ICONS.length) {
+                    tentTag.style.display = 'inline-block';
+                    const info = TENT_LEVELS[level - 1];
+                    const pct = Math.round(info.reduction * 100);
+                    tentTag.textContent = TENT_ICONS[level] + ' ' + TENT_DISPLAY_NAMES[level];
+                    tentTag.title = `🏕️ ${TENT_DISPLAY_NAMES[level]}\n「${TENT_LEVELS[level - 1].log}」\n\n🌡️ 温度衰减 -${pct}%\n😊 心情衰减 -${Math.round(pct * 0.5)}%\n🍞 饱腹衰减 -${Math.round(pct * 0.3)}%\n❤️ 健康损耗降低\n\n📅 连续打卡 ${TENT_LEVELS[level - 1].days} 天解锁`;
+                } else {
+                    tentTag.style.display = 'inline-block';
+                    tentTag.textContent = '🏕️ 无帐篷';
+                    tentTag.title = '每天打卡可升级帐篷，抵御风雪！';
+                }
+            }
+        }
+
+        function renderPanel(tabName) {
+            const container = document.getElementById('panelContainer');
+            updateTravelerState(Date.now() / 1000);
+            let html = '';
+            switch (tabName) {
+                case 'checkin': html = renderCheckinPanel(); break;
+                case 'adventure': html = renderAdventurePanel(); break;
+                case 'cards': html = renderCardsPanel(); break;
+                case 'stats': html = renderStatsPanel(); break;
+            }
+            container.innerHTML = html;
+            bindPanelEvents(tabName);
+            if (tabName === 'checkin') updateTomatoUI();
+        }
+
+        function renderCheckinPanel() {
+            const today = getToday();
+            const todayCheckins = userData.checkins[today] || [];
+            const stats = calcStats(today);
+            let listHtml = '';
+            if (todayCheckins.length > 0) {
+                for (const e of todayCheckins) {
+                    const timeStr = new Date(e.timestamp * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+                    const durStr = e.duration ? `${e.duration}分钟` : '--';
+                    listHtml += `
+                    <li>
+                        <span class="task-name editable-task" data-timestamp="${e.timestamp}" title="点击修改任务名">✏️ ${escHtml(e.task)}</span>
+                        <span class="task-dur">⏱ ${durStr}</span>
+                        <span class="task-time">${timeStr}</span>
+                        <button class="btn-delete-checkin" data-timestamp="${e.timestamp}" style="background:none;border:none;color:#e05555;cursor:pointer;font-size:1rem;padding:0 4px;" title="删除此记录">✕</button>
+                    </li>`;
+                }
+            }
+            // 在 renderCheckinPanel 函数内，构建掉落日志的 HTML 变量
+            let dropLogHtml = '';
+            if (currentTomatoDrops.length > 0) {
+                dropLogHtml = '<div class="tomato-drop-area"><div class="drop-header" style="font-size:0.7rem;color:#94a3b8;">📦 本次掉落</div><ul class="drop-list">';
+                for (const drop of currentTomatoDrops) {
+                    dropLogHtml += `<li>· ${drop.rarity} · ${drop.name}</li>`;
+                }
+                dropLogHtml += '</ul></div>';
+            }
+            // 滚动区域内容
+            const scrollContent = todayCheckins.length > 0
+                ? `<ul class="checkin-list">${listHtml}</ul>`
+                : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:0.9rem;padding:0 20px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:8px;">📭</div><div>风声呜咽，雪花在帐篷外打着旋。</div><div style="margin-top:4px;font-size:0.8rem;color:#64748b;">今天还没有留下任何足迹……</div><div style="margin-top:6px;font-size:0.75rem;color:#475569;">输入任务名称，开始你的第一次打卡吧。</div></div>`;
+            
+
+            return `
+            <div class="panel" style="display:flex;flex-direction:column;height:100%;">
+                <h3><span class="icon">📝</span> 每日打卡</h3>
+                <div class="input-row">
+                    <input type="text" id="taskInput" placeholder="任务名称（如：阅读、运动）" maxlength="60">
+                    <input type="number" id="durInput" class="dur-input" placeholder="分钟" min="0" max="600">
+                    <button class="btn btn-primary" id="btnCheckin">✅ 打卡</button>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                    <button class="btn btn-outline btn-sm" id="btnClearAll">🗑 清除今天全部</button>
+                </div>
+                <p style="font-size:0.82rem;color:var(--text2);margin:4px 0;">
+                    📅 今日：<b>${todayCheckins.length}</b> 条打卡 | ⏱ 总专注：<b>${stats.totalDurationToday}</b> 分钟 | 🔥 连续：<b>${stats.streak}</b> 天
+                </p>
+
+                <!-- 打卡列表滚动区 -->
+                <div style="flex:1;overflow-y:auto;min-height:0;margin-bottom:12px;">
+                    ${scrollContent}
+                </div>
+
+                <!-- 抽卡按钮 -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button class="btn btn-gold btn-sm" id="btnDrawCard">🎴 抽卡（每日）</button>
+                    <span style="font-size:0.75rem;color:var(--text2);align-self:center;">
+                        ${userData.lastDailyDraw === today ? '✅ 今日已抽卡' : '⬅ 打卡后可抽'}
+                    </span>
+                </div>
+
+                <hr style="border-color:var(--glass-border);margin:0 0 10px 0;">
+
+                <!-- 番茄钟（固定在底部） -->
+                <div class="tomato-section" style="flex-shrink:0;">
+                    <h4 style="margin:0 0 4px;color:var(--text);">🍅 番茄钟</h4>
+                    <div class="tomato-display" id="tomatoDisplay">${formatTomatoTime(tomatoState.remainingSeconds, tomatoState.mode)}</div>
+                    <div class="tomato-preset">
+                        <button class="btn btn-outline btn-sm preset-btn" data-min="15">15分</button>
+                        <button class="btn btn-outline btn-sm preset-btn" data-min="25">25分</button>
+                        <button class="btn btn-outline btn-sm preset-btn" data-min="30">30分</button>
+                        <button class="btn btn-outline btn-sm preset-btn" data-min="45">45分</button>
+                        <input type="number" id="tomatoCustomMin" class="tomato-custom" placeholder="自定义" min="1" max="120">
+                    </div>
+                    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+                        <button class="btn btn-primary btn-sm" id="btnTomatoStart">▶ 开始</button>
+                        <button class="btn btn-outline btn-sm" id="btnTomatoStop">⏹ 停止</button>
+                        <button class="btn btn-outline btn-sm" id="btnTomatoMode">⏱ 正计时</button>
+                        <input type="text" id="tomatoTaskInput" placeholder="任务名" value="番茄钟专注" style="width:120px;padding:4px 8px;border-radius:16px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text);font-size:0.78rem;">
+                    </div>
+                    ${dropLogHtml}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderAdventurePanel() {
+            const report = getAdventureReport();
+            const t = report.traveler;
+            const updateTime = new Date(report.updatedAt * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' });
+            const remaining = Math.max(0, Math.ceil((ADVENTURE_REFRESH_SEC - (Date.now()/1000 - report.updatedAt)) / 60));
+            let bpHtml = t.backpack.length ? '<ul class="backpack-list">' + t.backpack.map((item) => {
+                const [name, , dur] = item;
+                const durability = dur || 1;
+                const durText = (durability > 1) ? ` (${durability})` : '';
+                return `<li>🎒 ${escHtml(name)}${durText}</li>`;
+            }).join('') + '</ul>' : '<span style="color:#64748b;font-size:0.8rem;">（空）</span>';
+
+            const statusMsgs = [];
+            if (t.temperature <= -25) statusMsgs.push('❄️极度寒冷');
+            else if (t.temperature <= -10) statusMsgs.push('🌬️寒冷');
+            if (t.health <= 20) statusMsgs.push('💔生命垂危');
+            else if (t.health <= 50) statusMsgs.push('🩹身体虚弱');
+            if (t.hunger <= 20) statusMsgs.push('🍂饥肠辘辘');
+            else if (t.hunger <= 50) statusMsgs.push('🥄略感饥饿');
+            if (t.mood <= 20) statusMsgs.push('😢情绪低落');
+            else if (t.mood <= 50) statusMsgs.push('😐心情不佳');
+            const statusText = statusMsgs.length ? '【状态】' + statusMsgs.join(' ') : '';
+
+            let logHtml = '';
+            if (t.log && t.log.length) {
+                logHtml = '<div style="margin-top:10px;"><span style="font-size:0.8rem;color:var(--text2);">📜 旅行者日志：</span><ul class="checkin-list">';
+                for (const entry of t.log.slice(-5)) logHtml += `<li style="font-size:0.75rem;color:var(--text2);">${escHtml(entry)}</li>`;
+                logHtml += '</ul></div>';
+            }
+
+            return `
+            <div class="panel">
+                <h3><span class="icon">🗺️</span> 雪原冒险报告</h3>
+                <div class="adventure-meta">
+                    <span class="weather-tag" title="${escHtml(getWeatherScene(report.weather))}">☁️ ${escHtml(report.weather)}</span>
+                    <span>🕒 更新：${updateTime}</span>
+                    <span>⏳ 刷新倒计时：约 ${remaining} 分钟</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text2);margin:-4px 0 8px 0;font-style:italic;line-height:1.5;">“${escHtml(getWeatherScene(report.weather))}”</div>
+                <div class="adventure-event">🚶 ${escHtml(report.event)}</div>
+                <div style="margin-top:8px;font-size:0.85rem;color:var(--text);">
+                    🌡️ 温度:<b>${Math.round(t.temperature)}°C</b> · ❤️ 健康:<b>${Math.round(t.health)}</b> · 🍞 饱腹:<b>${Math.round(t.hunger)}</b> · 😊 心情:<b>${Math.round(t.mood)}</b>
+                    ${(t.tentLevel || 0) > 0 ? '<br>🏕️ ' + TENT_DISPLAY_NAMES[t.tentLevel] + '（减免 ' + Math.round(TENT_LEVELS[t.tentLevel - 1].reduction * 100) + '% 温度衰减）' : '<br>🏕️ 无帐篷，风雪无阻'}
+                    ${statusText ? '<br><span style="color:var(--text2);letter-spacing:0.02em;">' + statusText + '</span>' : ''}
+                </div>
+                <div style="margin-top:6px;">
+                    <span style="font-size:0.8rem;color:var(--text2);">🎒 旅行者背包（${t.backpack.length}/10）：</span>${bpHtml}
+                </div>
+                ${logHtml}
+            </div>`;
+        }
+
+        function renderCardsPanel() {
+            const cards = userData.cards.filter(c => c[2] > 0);
+            if (!cards.length) return '<div class="panel" style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:30px 20px;"><h3 style="width:100%;">🎒 我的背包</h3><div style="font-size:3rem;margin:10px 0;">🎒</div><div style="color:var(--text2);font-size:0.85rem;">背包随风晃动，轻飘飘的——里面什么也没有。</div><div style="color:#64748b;font-size:0.75rem;margin-top:4px;">专注学习或完成一个番茄钟，也许能捡到有用的东西。</div><div style="color:#475569;font-size:0.7rem;margin-top:8px;font-style:italic;">荒野里总有好东西等着被发现，只要你不停下脚步。</div></div>';
+
+            let gridHtml = '';
+            for (const [name, desc, cnt] of cards) {
+                const rarity = getCardRarity(name);
+                const rarityClass = rarity === '传说' ? 'legend' : rarity === '稀有' ? 'rare' : '';
+                const badgeClass = rarity === '传说' ? 'badge-legend' : rarity === '稀有' ? 'badge-rare' : 'badge-common';
+                const countStr = cnt > 1 ? `<span class="card-count">x${cnt}</span>` : '';
+
+                gridHtml += `
+                <div class="card-item ${rarityClass}">
+                    <span class="badge ${badgeClass}">${rarity}</span>
+                    <div class="card-name">${escHtml(name)}${countStr}</div>
+                    <div class="card-desc">${escHtml(desc)}</div>
+                    <div class="card-actions">
+                        <button class="btn btn-outline btn-sm view-card-btn" data-name="${escHtml(name)}">🔍 查看</button>
+                        <button class="btn btn-gold btn-sm give-card-btn" data-name="${escHtml(name)}">🎁 赠送</button>
+                    </div>
+                </div>`;
+            }
+            return `<div class="panel"><h3>🎒 我的背包</h3><p style="font-size:0.8rem;color:#94a3b8;margin-bottom:6px;">共 <b>${cards.length}</b> 种物品</p><div class="card-grid">${gridHtml}</div></div>`;
+        }
+
+        function renderStatsPanel() {
+            const stats = calcStats();
+            let tasksHtml = '';
+            const entries = Object.entries(stats.tasks);
+            if (entries.length) {
+                tasksHtml = '<ul class="checkin-list">';
+                for (const [name, s] of entries) {
+                    let durStr = '';
+                    if (s.totalDuration) {
+                        const h = Math.floor(s.totalDuration / 60), m = s.totalDuration % 60;
+                        durStr = h > 0 ? `累计 ${h}小时${m}分钟` : `累计 ${m}分钟`;
+                    }
+                    tasksHtml += `<li><span class="task-name">· ${escHtml(name)}：${s.count} 次</span><span class="task-dur">${durStr}</span></li>`;
+                }
+                tasksHtml += '</ul>';
+            } else tasksHtml = '<p style="color:#94a3b8;">暂无任务记录。</p>';
+            const todayDur = (userData.checkins[getToday()] || []).reduce((s, e) => s + (e.duration || 0), 0);
+            return `
+            <div class="panel">
+                <h3>📊 历史累计统计</h3>
+                <p style="font-size:0.9rem;margin-bottom:4px;">
+                    📅 总打卡天数：<b>${stats.total}</b> 天 | 🔥 连续打卡：<b>${stats.streak}</b> 天 | ⏱ 今日专注：<b>${todayDur}</b> 分钟
+                </p>
+                ${tasksHtml}
+                ${stats.streak >= 7 ? '<p style="color:#f0c040;">🌟 连续一周打卡达成！雪原的精灵为你歌唱！</p>' : ''}
+                <!-- 存档管理 -->
+                <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-outline btn-sm" id="btnExport">📤 导出存档</button>
+                    <label class="btn btn-outline btn-sm" for="importFileStats">📥 导入存档</label>
+                    <input type="file" id="importFileStats" accept=".json" style="display:none;">
+                </div>
+            </div>`;
+        }
+
+        function bindPanelEvents(tabName) {
+            if (tabName === 'checkin') {
+                document.getElementById('btnCheckin')?.addEventListener('click', () => {
+                    const task = document.getElementById('taskInput').value.trim();
+                    if (!task) { showToast('⚠️ 请输入任务名称'); return; }
+                    let dur = document.getElementById('durInput').value ? parseInt(document.getElementById('durInput').value) : null;
+                    let wasTrimmed = false;
+                    if (dur !== null && dur > 600) {
+                        dur = 600;
+                        wasTrimmed = true;
+                    }
+                    addCheckin(task, dur);
+                    document.getElementById('taskInput').value = '';
+                    document.getElementById('durInput').value = '';
+                    if (wasTrimmed) {
+                        showToast('⚠️ 单次打卡时长已自动调整为600分钟（上限）。', 3000);
+                    } else {
+                        showToast('✅ 打卡成功！');
+                    }
+                    renderPanel('checkin');
+                    updateTravelerBar();
+                });
+
+                document.getElementById('btnClearAll')?.addEventListener('click', () => {
+                    const cnt = clearTodayCheckins();
+                    forceSaveAll();
+                    showToast(cnt > 0 ? `✅ 已清除今天 ${cnt} 条记录` : '📅 今天还没有打卡记录');
+                    renderPanel('checkin');
+                });
+
+                // 删除单条记录
+                document.querySelectorAll('.btn-delete-checkin').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const ts = parseInt(btn.dataset.timestamp);
+                        if (removeCheckinByTimestamp(ts)) {
+                            showToast('🗑️ 记录已删除');
+                            renderPanel('checkin');
+                            updateTravelerBar();
+                        }
+                    });
+                });
+
+                // 编辑任务名
+                document.querySelectorAll('.editable-task').forEach(span => {
+                    span.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        const ts = parseInt(this.dataset.timestamp);
+                        const currentText = this.textContent.replace('✏️ ', '').trim();
+
+                        // 创建输入框
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.value = currentText;
+                        input.style.width = '80%';
+                        input.style.padding = '2px 6px';
+                        input.style.borderRadius = '4px';
+                        input.style.border = '1px solid #5eb0e5';
+                        input.style.background = 'var(--glass-bg)';
+                        input.style.color = '#d0d8e8';
+                        input.style.fontSize = '0.85rem';
+
+                        // 替换 span 为 input
+                        this.replaceWith(input);
+                        input.focus();
+                        input.select();
+
+                        const save = () => {
+                            const newTask = input.value.trim();
+                            if (newTask && newTask !== currentText) {
+                                updateCheckinTask(ts, newTask);
+                                showToast('✏️ 任务名已更新');
+                            }
+                            // 重新渲染面板
+                            renderPanel('checkin');
+                            updateTravelerBar();
+                        };
+
+                        input.addEventListener('blur', save);
+                        input.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                input.blur();
+                            } else if (e.key === 'Escape') {
+                                input.value = currentText;
+                                input.blur();
+                            }
+                        });
+                    });
+                });
+                document.getElementById('btnDrawCard')?.addEventListener('click', () => {
+                    updateTravelerState(Date.now()/1000);
+                    const result = processDailyDraw();
+                    if (!result) { showToast('⚠️ 今天还没有打卡，或者已经抽过卡了'); return; }
+                    showToast(`${result.isExtra ? '🌈 连续七天彩蛋！传奇亮相！' : '🎴 每日抽卡'} 获得【${result.name}】`, 3500);
+                    forceSaveAll();
+                    renderPanel('checkin');
+                    updateTravelerBar();
+                });
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.addEventListener('click', () => setTomatoPreset(parseInt(btn.dataset.min)));
+                });
+                document.getElementById('tomatoCustomMin')?.addEventListener('change', function() {
+                    const val = parseInt(this.value);
+                    if (val && val > 0 && tomatoState.status === 'idle') {
+                        setTomatoPreset(val);
+                        this.value = '';
+                    }
+                });
+                document.getElementById('btnTomatoStart')?.addEventListener('click', startTomato);
+                document.getElementById('btnTomatoStop')?.addEventListener('click', () => stopTomato(true));
+                document.getElementById('btnTomatoMode')?.addEventListener('click', toggleTomatoMode);
+                document.getElementById('tomatoTaskInput')?.addEventListener('input', function() {
+                    tomatoState.taskName = this.value.trim() || '番茄钟专注';
+                });
+            }
+            if (tabName === 'cards') {
+                document.querySelectorAll('.view-card-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const name = btn.dataset.name;
+                        const item = getItemByName(name);
+                        const viewText = item ? item[2] : '你仔细端详着这个物品，但它似乎没什么特别的。';
+                        showToast(`🔍 ${viewText}`, 3500);
+                    });
+                });
+                document.querySelectorAll('.give-card-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const name = btn.dataset.name;
+                        const thanks = giveToTraveler(name);
+                        if (!thanks) return;
+                        forceSaveAll();
+                        showToast(`🎁 ${thanks}`);
+                        renderPanel('cards');
+                        updateTravelerBar();
+                    });
+                });
+            }
+            if (tabName === 'stats') {
+                document.getElementById('btnExport')?.addEventListener('click', exportSave);
+                document.getElementById('importFileStats')?.addEventListener('change', function(e) {
+                    if (e.target.files.length > 0) {
+                        importSave(e.target.files[0]);
+                        e.target.value = '';
+                    }
+                });
+            }
+        }
+
+        // ==================== 飘雪与定时器 ====================
+        let snowflakes = []; // 存放当前雪花元素
+
+        function initSnowfall(weather = adventureState.weather) {
+            const container = document.getElementById('snowfall');
+            // 清除旧雪花
+            container.innerHTML = '';
+            snowflakes = [];
+
+            const effect = WEATHER_EFFECTS[weather] || WEATHER_EFFECTS['小雪'];
+            if (effect.count === 0) return; // 晴朗天气无雪花
+
+            const flakes = ['❄', '❅', '❆', '✦', '•', '·'];
+            if (effect.hail) {
+                flakes.length = 0;
+                flakes.push('•', '·', '⬤');
+            }
+            if (effect.rain) {
+                flakes.length = 0;
+                flakes.push('|', '│');
+            }
+
+            for (let i = 0; i < effect.count; i++) {
+                const span = document.createElement('span');
+                span.className = 'snowflake';
+                span.textContent = flakes[Math.floor(Math.random() * flakes.length)];
+
+                // 随机大小
+                const size = effect.minSize + Math.random() * (effect.maxSize - effect.minSize);
+                span.style.fontSize = size + 'rem';
+                // 随机下落速度
+                const duration = effect.minDur + Math.random() * (effect.maxDur - effect.minDur);
+                span.style.animationDuration = duration + 's';
+                // 随机透明度
+                span.style.opacity = effect.opacity * (0.5 + Math.random() * 0.5);
+                // 初始位置
+                span.style.left = Math.random() * 100 + '%';
+                span.style.animationDelay = Math.random() * 10 + 's';
+
+                // 特殊效果
+                if (effect.wind) {
+                    span.style.animationName = 'fallWind'; // 需要定义倾斜动画
+                } else if (effect.sparkle) {
+                    span.style.animationName = 'fallSparkle'; // 闪烁
+                } else {
+                    span.style.animationName = 'fall';
+                }
+
+                // 极光颜色
+                if (effect.aurora) {
+                    const colors = ['#a0f0c0', '#80c0ff', '#c0a0ff', '#f0c0e0'];
+                    span.style.color = colors[Math.floor(Math.random() * colors.length)];
+                    span.style.textShadow = '0 0 4px #fff, 0 0 10px currentColor';
+                }
+
+                container.appendChild(span);
+                snowflakes.push(span);
+            }
+        }
+
+        function initTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderPanel(btn.dataset.tab);
+                });
+            });
+        }
+
+        function initVisibilityHandlers() {
+            // 切换标签页时：倒计时模式下确保有到点完成定时器；回到页面时按真实时间校正
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    // 即将进入后台：调度一次性到点完成（后台也可能触发）
+                    if (tomatoState.status === 'running') scheduleTomatoCompletion();
+                } else {
+                    // 回到页面：按真实已过时间立即推进/完成，防止只在切回时才结束
+                    reconcileTomato();
+                }
+            });
+            // 窗口重新聚焦（某些场景 visibilitychange 不触发）
+            window.addEventListener('focus', reconcileTomato);
+        }
+
+        function startTickers() {
+            setInterval(updateTravelerBar, TICK_INTERVAL_MS);
+            setInterval(() => {
+                const nowSec = Date.now() / 1000;
+                if (adventureState.updatedAt && nowSec - adventureState.updatedAt >= ADVENTURE_REFRESH_SEC) {
+                    refreshAdventure();
+                }
+                autoUseBackpackItem();
+                updateTravelerState(nowSec);
+                if (isDirty) {
+                    forceSaveAll();
+                }
+            }, 30000);
+        }
+        // ==================== 番茄钟掉落辅助函数 ====================
+        // --- 普 通 掉 落 ---
+        function dropCommonItem() {
+            if (DROP_POOL["普通"].length === 0) return null;
+            const item = randChoice(DROP_POOL["普通"]);
+            addUserItem(item[0], item[1]);
+            return item;
+        }
+
+        // --- 稀 有 / 传 说 掉 落（过滤已拥有） ---
+        function dropRareOrLegendaryItem(rarity) {
+            const ownedNames = getAllOwnedNames();
+            const pool = DROP_POOL[rarity];
+            if (!pool || pool.length === 0) return null;
+            const available = pool.filter(item => !ownedNames.has(item[0]));
+            if (available.length === 0) return null;
+            const item = randChoice(available);
+            addUserItem(item[0], item[1]);
+            return item;
+        }
+
+        function init() {
+            updateTravelerState(Date.now() / 1000);
+            forceSaveAll();
+            initSnowfall(adventureState.weather); // 改为带参数
+            initTabs();
+            initAnserChat();
+                // 主题切换按钮
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (themeBtn) {
+                themeBtn.addEventListener('click', cycleTheme);
+            }
+                // 梦境按钮绑定
+            const sleepBtn = document.getElementById('dreamBtnSleep');
+            if (sleepBtn) sleepBtn.addEventListener('click', handleDreamSleep);
+            const wakeBtn = document.getElementById('dreamBtnWake');
+            if (wakeBtn) wakeBtn.addEventListener('click', hideDream);
+            // 将关键函数暴露给内联事件（备用）
+            window.handleDreamSleep = handleDreamSleep;
+            window.hideDream = hideDream;
+            initVisibilityHandlers();
+            startTickers();
+            renderPanel('checkin');
+            updateTravelerBar();
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+
+        window.addEventListener('beforeunload', () => {
+            updateTravelerState(Date.now() / 1000);
+            forceSaveAll();
+        });
+        // ==================== 安瑟小猫聊天 ====================
+        const ANSER_API_URL = 'https://umlla.qzz.io/chat'; // 替换
+        const ANSER_TOKEN   = 'anser-cat-secret-2062';       // 替换
+
+        let chatMinimized = true;
+        // 获取或创建持久用户 ID（存于 localStorage）
+        function getUserId() {
+            let userId = localStorage.getItem('anser_user_id');
+            if (!userId) {
+                userId = 'user-' + Math.random().toString(36).substring(2, 10);
+                localStorage.setItem('anser_user_id', userId);
+            }
+            return userId;
+        }
+
+        function initAnserChat() {
+            const chatContainer = document.getElementById('anser-chat');
+            const chatMessages   = document.getElementById('anser-chat-messages');
+            const chatInput      = document.getElementById('anser-chat-input');
+            const sendBtn        = document.getElementById('anser-chat-send');
+            const toggleBtn      = document.getElementById('anser-chat-toggle');
+            const floatBtn       = document.getElementById('anser-chat-float');
+            const header         = document.getElementById('anser-chat-header');
+
+            function setMinimized(min) {
+                chatMinimized = min;
+                if (min) {
+                    chatContainer.classList.add('anser-chat-minimized');
+                    floatBtn.style.display = 'flex';   // 显示猫爪
+                } else {
+                    chatContainer.classList.remove('anser-chat-minimized');
+                    floatBtn.style.display = 'none';   // 隐藏猫爪
+                }
+            }
+
+            toggleBtn.addEventListener('click', () => setMinimized(!chatMinimized));
+            floatBtn.addEventListener('click', () => setMinimized(false));
+            header.addEventListener('click', (e) => {
+                if (e.target === header || e.target.tagName === 'SPAN') setMinimized(!chatMinimized);
+            });
+
+            function addMessage(type, text) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `anser-msg ${type}`;
+                if (type === 'bot') {
+                    msgDiv.innerHTML = `<span class="cat-icon">🐱</span><span>${text}</span>`;
+                } else {
+                    msgDiv.textContent = text;
+                }
+                chatMessages.appendChild(msgDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // 获取当前游戏上下文，让安瑟感知天气、帐篷和旅行者状态
+            function getGameContext() {
+                const t = travelerState;
+                const w = adventureState.weather || '晴朗';
+                const wInfo = WEATHER_RATES[w] || {};
+                const tentLvl = t.tentLevel || 0;
+                const tentName = tentLvl > 0 ? TENT_DISPLAY_NAMES[tentLvl] : '无帐篷';
+                const tentLog = tentLvl > 0 ? TENT_LEVELS[tentLvl - 1].log : '';
+                const statusParts = [];
+                if (t.temperature <= -20) statusParts.push('快冻僵了');
+                else if (t.temperature <= -10) statusParts.push('冷得发抖');
+                else if (t.temperature >= 0) statusParts.push('还挺暖和');
+                if (t.health <= 15) statusParts.push('生命垂危');
+                else if (t.health <= 40) statusParts.push('浑身难受');
+                if (t.hunger <= 15) statusParts.push('饿得头晕');
+                else if (t.hunger <= 40) statusParts.push('肚子在叫');
+                if (t.mood <= 15) statusParts.push('情绪低落');
+                else if (t.mood >= 70) statusParts.push('心情不错');
+                const statusLine = statusParts.length ? '，' + statusParts.join('，') : '，状态一般';
+                const sceneDesc = wInfo.scene || '';
+                return `你是住在雪原冒险网页里的一只小猫助手。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。请以小猫安瑟的语气喵喵地回答。`;
+            }
+
+            async function sendMessage() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+
+                addMessage('user', text);
+                chatInput.value = '';
+
+                try {
+                    const response = await fetch(ANSER_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token: ANSER_TOKEN,
+                            message: text,
+                            context: getGameContext()
+                        })
+                    });
+                    const data = await response.json();
+                    addMessage('bot', data.reply || '喵…本喵的爪子卡住了…');
+                } catch (err) {
+                    addMessage('bot', `喵…信号不好：${err.message}`);
+                }
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            setMinimized(true);
+        }
+
+        // 在 init() 函数中调用 initAnserChat()
+    })();
+</script>
+<!-- ==================== 濒死梦境覆盖层 ==================== -->
+<div id="dreamOverlay" class="dream-overlay" style="display:none;">
+    <div class="dream-dark-overlay" id="dreamDarkOverlay"></div>
+    <div class="sun-glow"></div>
+    <div class="ground"></div>
+    <div class="petals-container" id="dreamPetals"></div>
+    <div class="shout-layer" id="dreamShoutLayer"></div>
+
+    <div class="dream-card">
+        <h2>🌸 温暖的草地</h2>
+        <p class="subtitle">—— 回忆 ——</p>
+        <p class="description">
+            风很轻，阳光像蜂蜜一样流淌在皮肤上。<br>
+            远处的炊烟、熟悉的乡音……<br>
+            一切都那么真实，又那么遥远。
+        </p>
+        <div class="btn-sleep" id="dreamBtnSleep">
+        🛌 继续沉睡
+        <span class="btn-wake" id="dreamBtnWake">🌬️ 挣扎醒来</span>
+        </div>
+    </div>
+</div>
+<!-- 安瑟小猫聊天组件 -->
+<div id="anser-chat" class="anser-chat anser-chat-minimized">
+    <div class="anser-chat-header" id="anser-chat-header">
+        <div class="anser-cat-avatar">🐱</div>
+        <span>小猫安瑟</span>
+        <button id="anser-chat-toggle" class="anser-chat-toggle-btn">─</button>
+    </div>
+    <div class="anser-chat-body">
+        <div class="anser-chat-messages" id="anser-chat-messages">
+            <div class="anser-msg bot">
+                <span class="cat-icon">🐱</span>
+                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（输入“/kk”向答案之书提问）</span>
+            </div>
+        </div>
+        <div class="anser-chat-input-row">
+            <input type="text" id="anser-chat-input" placeholder="跟小猫说点什么..." autocomplete="off" />
+            <button id="anser-chat-send" class="anser-chat-send-btn">→</button>
+        </div>
+    </div>
+</div>
+
+<!-- 猫爪悬浮按钮（最小化时显示） -->
+<button id="anser-chat-float" class="anser-chat-float-btn">🐾</button>
+</body>
+</html>
