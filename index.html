@@ -12,7 +12,7 @@
         }
     })();
     </script>
-    <title>卡卡查克 · 雪原冒险日志</title>
+    <title>卡卡查克 · 雪原冒险</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧭</text></svg>">
     <style>
         :root {
@@ -1624,7 +1624,7 @@
             let streak = 0, d = yesterday;
             while (dateSet.has(d)) {
                 streak++;
-                d = new Date(new Date(d + 'T00:00:00+08:00').getTime() - 86400000).toISOString().slice(0, 10);
+                d = getLocalDate(new Date(d + 'T00:00:00+08:00').getTime() - 86400000);
             }
             if (dateSet.has(today)) streak++;
             const tasks = {};
@@ -1820,8 +1820,8 @@
                 if (tomatoState.mode === 'stopwatch') {
                     realElapsed = tomatoState.elapsedFocusSeconds + (now - tomatoState.startTime) / 1000;
                 } else {
-                    const previousElapsed = tomatoState.totalSeconds - tomatoState.remainingSeconds;
-                    realElapsed = previousElapsed + (now - tomatoState.startTime) / 1000;
+                    // countdown: (now - startTime) 已包含全部经过时间（暂停恢复时 startTime 已调整），无需再加 previousElapsed
+                    realElapsed = (now - tomatoState.startTime) / 1000;
                 }
             } else if (tomatoState.status === 'paused') {
                 realElapsed = tomatoState.elapsedFocusSeconds;
