@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.15-3';
+        var v = '2025.06.15-2';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
@@ -1030,6 +1030,11 @@
             tentLevel: 0, lastStreak: 0, tentCheckedDate: '',
             weatherRate: { appliedAt: 0, temp: 1, mood: 1, health: 1, hunger: 1, currentWeather: '' }
         });
+        // 安瑟 NPC 状态（任务/支线线索），持久化在旅行者存档中
+        if (typeof travelerState.quests === 'undefined') travelerState.quests = [];
+        if (typeof travelerState.anserCtx === 'undefined' || typeof travelerState.anserCtx !== 'object' || Array.isArray(travelerState.anserCtx)) {
+            travelerState.anserCtx = { lastTaskAt: 0, lastTaskTitle: '', offeredAt: 0, pending: null };
+        }
         // 帐篷系统初始化：兼容旧存档，根据已有连续天数直接设置帐篷等级
         (function initTentOnUpgrade() {
             if (travelerState.tentLevel === undefined) {
@@ -1260,6 +1265,10 @@
             if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
             if (!travelerState.backpack) travelerState.backpack = [];
             if (!travelerState.log) travelerState.log = [];
+            if (!travelerState.quests) travelerState.quests = [];
+            if (!travelerState.anserCtx || typeof travelerState.anserCtx !== 'object' || Array.isArray(travelerState.anserCtx)) {
+                travelerState.anserCtx = { lastTaskAt: 0, lastTaskTitle: '', offeredAt: 0, pending: null };
+            }
 
             // userData 补全
             if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
@@ -1308,6 +1317,129 @@
             userData.cards.forEach(c => names.add(c[0]));
             travelerState.backpack.forEach(([name]) => names.add(name));
             return names;
+        }
+
+        // ==================== 物品给予工具（背包已满则放入用户背包） ====================
+        const TRAVELER_BACKPACK_MAX = 10;
+        // 把物品交给旅行者：旅行者背包放得下则入旅行者背包，否则回落到用户背包
+        function grantItemToTraveler(name, count = 1) {
+            const item = getItemByName(name);
+            const desc = item ? item[1] : name;
+            for (let i = 0; i < count; i++) {
+                if (travelerState.backpack.length < TRAVELER_BACKPACK_MAX) {
+                    const durability = (getItemEffect(name)?.durability) || 1;
+                    travelerState.backpack.push([name, Date.now() / 1000, durability]);
+                } else {
+                    addUserItem(name, desc, 1);
+                }
+            }
+        }
+
+        // ==================== 安瑟 NPC：任务发放与结算 ====================
+        const ANSER_COOLDOWN_SEC = 15 * 60;      // 两次主动派发任务最小间隔
+        const ANSER_RESCUE_HEALTH = 20;           // 健康低于此值时，安瑟发布补给型支线
+        const ANSER_QUEST_POOL = [
+            // 专注 25 分钟 → 一次性治疗药膏
+            {
+                title: "为旅行者补一口热汤",
+                desc: "完成一个 25 分钟的番茄钟（专注计时）",
+                goal: 'focus', need: 25 * 60,
+                rewards: [
+                    { name: "治疗药膏", qty: 1 },
+                    { name: "干粮块", qty: 1 }
+                ]
+            },
+            // 打卡 3 条 → 耐久捕兽夹
+            {
+                title: "踩出一条脚印",
+                desc: "在今日打卡里记满 3 条",
+                goal: 'checkin', need: 3,
+                rewards: [{ name: "捕兽夹", qty: 1 }]
+            },
+            // 保持天气清爽（棕色任务改为：出门一趟）→ 一次性指南针
+            {
+                title: "替安瑟望一望北境",
+                desc: "在该任务进行的时段内，完成 1 条以上的打卡",
+                goal: 'checkin', need: 1,
+                rewards: [{ name: "指南针", qty: 1 }]
+            }
+        ];
+        // 根据旅行者状况挑选一条安瑟派发的任务；若无则返回 null
+        function anserOfferTask() {
+            const t = travelerState;
+            // 生命垂危时优先发布补给支线
+            if (t.health <= ANSER_RESCUE_HEALTH) {
+                return {
+                    title: "救急补给",
+                    desc: "完成一个 10 分钟以上的番茄钟，为旅行者换一份热食",
+                    goal: 'focus', need: 10 * 60, urgent: true,
+                    rewards: [
+                        { name: "干粮块", qty: 2 },
+                        { name: "治疗药膏", qty: 1 }
+                    ]
+                };
+            }
+            return ANSER_QUEST_POOL[Math.floor(Math.random() * ANSER_QUEST_POOL.length)];
+        }
+        // 结算：根据任务目标返回是否达成
+        function checkAnserQuestDone(quest, goalType) {
+            if (quest.goal === 'focus') {
+                return (Date.now() - quest.startedAt) / 1000 >= quest.need;
+            }
+            if (quest.goal === 'checkin') {
+                const today = getToday();
+                return (userData.checkins[today] || []).length >= quest.need;
+            }
+            return false;
+        }
+        // 结算任务：达成则发奖，并可从安瑟处接下一次
+        function settleAnserQuest(goalType, minutes = 0) {
+            const ctx = travelerState.anserCtx;
+            if (!ctx || !ctx.pending) return;
+            const quest = ctx.pending;
+            if (quest.goal !== goalType) return;
+
+            // 针对专注任务，用累计分钟判定；通过 startedAt 兜底
+            let done = false;
+            if (quest.goal === 'focus') {
+                done = minutes >= quest.need / 60;
+            } else {
+                done = checkAnserQuestDone(quest, goalType);
+            }
+            if (!done) return;
+
+            // 发奖：优先旅行者背包，满了进用户背包
+            const granted = [];
+            for (const r of quest.rewards || []) {
+                grantItemToTraveler(r.name, r.qty || 1);
+                granted.push(r.name);
+            }
+            pushTravelerLog(`${nowTimeStr()} ✨ 安瑟任务的奖励已送达：${granted.join('、')}。`);
+            showToast(`✨ 安瑟任务的奖励已送达：${granted.join('、')}`, 3500);
+            travelerState.quests = (travelerState.quests || []).filter(q => q.startedAt !== quest.startedAt);
+            ctx.pending = null;
+            ctx.lastTaskAt = Date.now();
+            ctx.lastTaskTitle = quest.title;
+            forceSaveAll();
+            renderPanel('checkin'); // 刷新，便于展示入包信息
+            updateTravelerBar();
+            return;
+        }
+
+        // 尝试从安瑟处接任务；已被接取/正在冷却则返回相应提示
+        function anserAcceptTask() {
+            const ctx = travelerState.anserCtx;
+            if (ctx.pending) return { ok: false, msg: `喵，你已经接了「${ctx.pending.title}」，先去忙完再回来找我吧～` };
+            const now = Date.now();
+            if (now - (ctx.lastTaskAt || 0) < ANSER_COOLDOWN_SEC * 1000) {
+                const remain = Math.max(0, Math.ceil((ANSER_COOLDOWN_SEC * 1000 - (now - (ctx.lastTaskAt || 0))) / 60000));
+                return { ok: false, msg: `喵，安瑟过会儿才有新差事，${remain} 分钟后再来找我喵～` };
+            }
+            const quest = anserOfferTask();
+            ctx.pending = { ...quest, startedAt: now };
+            ctx.offeredAt = now;
+            forceSaveAll();
+            return { ok: true, quest };
         }
         
         // ==================== 旅行者状态 ====================
@@ -1522,6 +1654,15 @@
                 applyEffect(eventObj.effects);
             }
 
+            // 若事件描述里有“捡到/采集/获得/收获”物资意向，给旅行者真实发一件通用物资（放不下则入用户背包）
+            const evenText = eventObj.text || '';
+            if (!isExtreme && /(捡到|收集|采集|获得|收获|拾取|捞到|换到|带回来)/.test(evenText)) {
+                const evenPool = ['干粮块', '暖石', '绷带', '冻莓干', '能量棒', '励志纸条', '幸运兔脚', '破旧手套'];
+                const evenItem = evenPool[Math.floor(Math.random() * evenPool.length)];
+                grantItemToTraveler(evenItem, 1);
+                pushTravelerLog(`${nowTimeStr()} 🎒 ${evenText}——旅行者把「${evenItem}」揣回了背包。`);
+            }
+
             // 记录日志
             const timeStr = nowTimeStr();
             if (isExtreme) {
@@ -1575,6 +1716,8 @@
                 duration: duration || null,
             });
             forceSaveAll();
+            // 结算安瑟任务（打卡类）
+            settleAnserQuest('checkin');
         }
 
         function clearTodayCheckins(taskName = null) {
@@ -1873,6 +2016,8 @@
 
                 showToast(msg, 4000);
                 forceSaveAll();
+                // 结算安瑟任务（专注类）
+                settleAnserQuest('focus', Math.max(minutes, 0));
                 renderPanel('checkin');   // 重新渲染打卡面板（会用到 currentTomatoDrops）
                 updateTravelerBar();
             } else if (record && realElapsed < 60) {
@@ -2668,36 +2813,11 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
-            document.addEventListener('keydown', (e) => {
-    const inChat = e.target && (e.target.id === 'anser-chat-input');
-    if (e.key.toLowerCase() === 'k' && !inChat) { pickTravelerPrompt(); }
-});
-
-// 对输入内容做转义，避免注入 HTML
+            // 对输入内容做转义，避免注入 HTML
 function escapeChatHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
-}
-
-// 将“询问旅行者近况/状态”包装成小猫口吻的对白（在本机本地转换）
-const TRAVELER_PROMPTS = [
-  "旅行者这会儿怎么样了？",
-  "帮我看看旅行者的身体状况怎么样？",
-  "旅行者现在的温度是多少呀？",
-  "旅行者饿了还是冷啦？",
-  "最近的冒险有什么事发生吗？"
-];
-
-let travelerPickIndex = 0;
-function pickTravelerPrompt() {
-    const input = document.getElementById('anser-chat-input');
-    if (!input) return;
-    setMinimized(false);
-    const prompt = TRAVELER_PROMPTS[travelerPickIndex % TRAVELER_PROMPTS.length];
-    travelerPickIndex++;
-    input.value = prompt;
-    input.focus();
 }
 
             // 获取当前游戏上下文，让安瑟感知天气、帐篷和旅行者状态
@@ -2720,7 +2840,15 @@ function pickTravelerPrompt() {
                 else if (t.mood >= 70) statusParts.push('心情不错');
                 const statusLine = statusParts.length ? '，' + statusParts.join('，') : '，状态一般';
                 const sceneDesc = wInfo.scene || '';
-                return `你是住在雪原冒险网页里的一只小猫助手。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。旅行者最近3条动态：${(t.log || []).slice(-3).map(l => '· ' + l).join('\n') || '（暂无动态）'}。请以小猫安瑟的语气喵喵地回答。`;
+                // 安瑟派发任务线索
+                const ctxA = travelerState.anserCtx || {};
+                let questLine = '';
+                if (ctxA.pending) {
+                    questLine = `。你已接下任务「${ctxA.pending.title}」：${ctxA.pending.desc}。`;
+                } else {
+                    questLine = '。你可以主动对安瑟说“接任务”来领取差事，完成后旅行者会得到奖励。';
+                }
+                return `你是住在雪原冒险网页里的一只小猫助手，偶尔会作为 NPC 给用户派发帮助旅行者的差事${questLine}。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。旅行者最近3条动态：${(t.log || []).slice(-3).map(l => '· ' + l).join('\n') || '（暂无动态）'}。请以小猫安瑟的语气喵喵地回答。`;
             }
 
             async function sendMessage() {
@@ -2730,18 +2858,15 @@ function pickTravelerPrompt() {
                 addMessage('user', escapeChatHtml(text));
                 chatInput.value = '';
 
-                // 本地兜底：消息里提到“旅行者”时，用当前数值现编一段小猫对白，不发请求
-                const q = text.replace(/[，。！？,.!?""''\s]/g, '').toLowerCase();
-                if (q.includes('旅行者')) {
-                    const stats = {
-                        temp: Math.round(travelerState.temperature),
-                        health: Math.round(travelerState.health),
-                        hunger: Math.round(travelerState.hunger),
-                        mood: Math.round(travelerState.mood)
-                    };
-                    const lastLog = (travelerState.log || []).slice(-3).reverse().join(' ');
-                    const reply = buildTravelerReply(stats, lastLog);
-                    addMessage('bot', `<span class="cat-icon">🐱</span>${reply}`);
+                // 安瑟 NPC：接任务 / 查看当前任务（本地处理，不发请求）
+                const qq = text.replace(/[，。！？,.!?""''\s]/g, '').toLowerCase();
+                if (qq.includes('接任务') || qq.includes('接差事') || qq.includes('接活') || qq.includes('任务')) {
+                    const res = anserAcceptTask();
+                    if (res.ok) {
+                        addMessage('bot', `<span class="cat-icon">🐱</span>${escHtml(`喵，正好有差事交给你——「${res.quest.title}」：${res.quest.desc}。办成之后旅行者会收到奖励哦。`)}`);
+                    } else {
+                        addMessage('bot', `<span class="cat-icon">🐱</span>${escHtml(res.msg)}`);
+                    }
                     return;
                 }
 
@@ -2770,31 +2895,6 @@ function pickTravelerPrompt() {
 
             setMinimized(true);
         }
-
-        // 用当前数值现编一段小猫口吻对白（提到旅行者时本地兜底，不发请求）
-            function buildTravelerReply(stats, lastLog) {
-                const want = [];
-                if (stats.temp <= -20) want.push('再这样下去要变成雪猫了！');
-                else if (stats.temp <= -10) want.push('小猫隔着屏幕都打哆嗦…');
-                else if (stats.temp >= 0) want.push('难得暖和，能晒会儿太阳啦');
-                if (stats.health <= 20) want.push('健康很危险，得赶紧补一补！');
-                else if (stats.health <= 45) want.push('身上还有点小伤，别硬撑');
-                else if (stats.health >= 85) want.push('精神头好得很呢');
-                if (stats.hunger <= 20) want.push('饿得前胸贴后背了');
-                else if (stats.hunger <= 45) want.push('肚子里有点空空的');
-                else if (stats.hunger >= 80) want.push('吃得饱饱的，很有力气');
-                if (stats.mood <= 20) want.push('心里闷闷的，需要安慰');
-                else if (stats.mood >= 70) want.push('心情亮堂堂的，走路都带风');
-
-                const pick = want.length ? want[Math.floor(Math.random() * want.length)] : '状态虽然平平，但还撑得住';
-
-                let head = `喵，帮你望了望远方——旅行者现在温度 ${stats.temp}°C，健康 ${stats.health}，饱腹 ${stats.hunger}，心情 ${stats.mood}。`;
-                let tail = "";
-                if (lastLog) tail = `\n这一路啊，${lastLog}。安瑟悄悄记在爪爪上了🥰`;
-                return `${head}\n看来嘛，${pick}。${tail}`;
-            }
-
-            // 在 init() 函数中调用 initAnserChat()
     })();
 </script>
 <!-- ==================== 濒死梦境覆盖层 ==================== -->
@@ -2830,7 +2930,7 @@ function pickTravelerPrompt() {
         <div class="anser-chat-messages" id="anser-chat-messages">
             <div class="anser-msg bot">
                 <span class="cat-icon">🐱</span>
-                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（按 K，或在消息里提到“旅行者”，小猫就会告诉你他的近况哦）</span>
+                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（小猫知道旅行者的最新近况，说“接任务”还能领一份帮旅行者的差事哦）</span>
             </div>
         </div>
         <div class="anser-chat-input-row">
