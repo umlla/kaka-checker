@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.15-2';
+        var v = '2025.06.15-3';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
@@ -2668,6 +2668,38 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
+            document.addEventListener('keydown', (e) => {
+    const inChat = e.target && (e.target.id === 'anser-chat-input');
+    if (e.key.toLowerCase() === 'k' && !inChat) { pickTravelerPrompt(); }
+});
+
+// 对输入内容做转义，避免注入 HTML
+function escapeChatHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+}
+
+// 将“询问旅行者近况/状态”包装成小猫口吻的对白（在本机本地转换）
+const TRAVELER_PROMPTS = [
+  "旅行者这会儿怎么样了？",
+  "帮我看看旅行者的身体状况怎么样？",
+  "旅行者现在的温度是多少呀？",
+  "旅行者饿了还是冷啦？",
+  "最近的冒险有什么事发生吗？"
+];
+
+let travelerPickIndex = 0;
+function pickTravelerPrompt() {
+    const input = document.getElementById('anser-chat-input');
+    if (!input) return;
+    setMinimized(false);
+    const prompt = TRAVELER_PROMPTS[travelerPickIndex % TRAVELER_PROMPTS.length];
+    travelerPickIndex++;
+    input.value = prompt;
+    input.focus();
+}
+
             // 获取当前游戏上下文，让安瑟感知天气、帐篷和旅行者状态
             function getGameContext() {
                 const t = travelerState;
@@ -2688,15 +2720,30 @@
                 else if (t.mood >= 70) statusParts.push('心情不错');
                 const statusLine = statusParts.length ? '，' + statusParts.join('，') : '，状态一般';
                 const sceneDesc = wInfo.scene || '';
-                return `你是住在雪原冒险网页里的一只小猫助手。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。请以小猫安瑟的语气喵喵地回答。`;
+                return `你是住在雪原冒险网页里的一只小猫助手。当前${w}，${sceneDesc}帐篷：${tentName}。${tentLog}旅行者状态——温度：${Math.round(t.temperature)}°C，健康：${Math.round(t.health)}，饱腹：${Math.round(t.hunger)}，心情：${Math.round(t.mood)}${statusLine}。旅行者最近3条动态：${(t.log || []).slice(-3).map(l => '· ' + l).join('\n') || '（暂无动态）'}。请以小猫安瑟的语气喵喵地回答。`;
             }
 
             async function sendMessage() {
                 const text = chatInput.value.trim();
                 if (!text) return;
 
-                addMessage('user', text);
+                addMessage('user', escapeChatHtml(text));
                 chatInput.value = '';
+
+                // 本地兜底：消息里提到“旅行者”时，用当前数值现编一段小猫对白，不发请求
+                const q = text.replace(/[，。！？,.!?""''\s]/g, '').toLowerCase();
+                if (q.includes('旅行者')) {
+                    const stats = {
+                        temp: Math.round(travelerState.temperature),
+                        health: Math.round(travelerState.health),
+                        hunger: Math.round(travelerState.hunger),
+                        mood: Math.round(travelerState.mood)
+                    };
+                    const lastLog = (travelerState.log || []).slice(-3).reverse().join(' ');
+                    const reply = buildTravelerReply(stats, lastLog);
+                    addMessage('bot', `<span class="cat-icon">🐱</span>${reply}`);
+                    return;
+                }
 
                 try {
                     const response = await fetch(ANSER_API_URL, {
@@ -2709,9 +2756,10 @@
                         })
                     });
                     const data = await response.json();
-                    addMessage('bot', data.reply || '喵…本喵的爪子卡住了…');
+                    const reply = (data.reply || '喵…本喵的爪子卡住了…');
+                    addMessage('bot', `<span class="cat-icon">🐱</span>${escapeChatHtml(reply)}`);
                 } catch (err) {
-                    addMessage('bot', `喵…信号不好：${err.message}`);
+                    addMessage('bot', `<span class="cat-icon">🐱</span>喵…信号不好：${escapeChatHtml(err.message)}`);
                 }
             }
 
@@ -2723,7 +2771,30 @@
             setMinimized(true);
         }
 
-        // 在 init() 函数中调用 initAnserChat()
+        // 用当前数值现编一段小猫口吻对白（提到旅行者时本地兜底，不发请求）
+            function buildTravelerReply(stats, lastLog) {
+                const want = [];
+                if (stats.temp <= -20) want.push('再这样下去要变成雪猫了！');
+                else if (stats.temp <= -10) want.push('小猫隔着屏幕都打哆嗦…');
+                else if (stats.temp >= 0) want.push('难得暖和，能晒会儿太阳啦');
+                if (stats.health <= 20) want.push('健康很危险，得赶紧补一补！');
+                else if (stats.health <= 45) want.push('身上还有点小伤，别硬撑');
+                else if (stats.health >= 85) want.push('精神头好得很呢');
+                if (stats.hunger <= 20) want.push('饿得前胸贴后背了');
+                else if (stats.hunger <= 45) want.push('肚子里有点空空的');
+                else if (stats.hunger >= 80) want.push('吃得饱饱的，很有力气');
+                if (stats.mood <= 20) want.push('心里闷闷的，需要安慰');
+                else if (stats.mood >= 70) want.push('心情亮堂堂的，走路都带风');
+
+                const pick = want.length ? want[Math.floor(Math.random() * want.length)] : '状态虽然平平，但还撑得住';
+
+                let head = `喵，帮你望了望远方——旅行者现在温度 ${stats.temp}°C，健康 ${stats.health}，饱腹 ${stats.hunger}，心情 ${stats.mood}。`;
+                let tail = "";
+                if (lastLog) tail = `\n这一路啊，${lastLog}。安瑟悄悄记在爪爪上了🥰`;
+                return `${head}\n看来嘛，${pick}。${tail}`;
+            }
+
+            // 在 init() 函数中调用 initAnserChat()
     })();
 </script>
 <!-- ==================== 濒死梦境覆盖层 ==================== -->
@@ -2759,7 +2830,7 @@
         <div class="anser-chat-messages" id="anser-chat-messages">
             <div class="anser-msg bot">
                 <span class="cat-icon">🐱</span>
-                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（输入“/kk”向答案之书提问）</span>
+                <span>喵～被你发现啦！雪原这么大，你想跟安瑟聊点什么？（按 K，或在消息里提到“旅行者”，小猫就会告诉你他的近况哦）</span>
             </div>
         </div>
         <div class="anser-chat-input-row">
