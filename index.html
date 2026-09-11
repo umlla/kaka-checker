@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.15-2';
+        var v = '2025.06.15-4';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
@@ -2462,7 +2462,7 @@
 
         function bindPanelEvents(tabName) {
             if (tabName === 'checkin') {
-                document.getElementById('btnCheckin')?.addEventListener('click', () => {
+                const doCheckin = () => {
                     const task = document.getElementById('taskInput').value.trim();
                     if (!task) { showToast('⚠️ 请输入任务名称'); return; }
                     let dur = document.getElementById('durInput').value ? parseInt(document.getElementById('durInput').value) : null;
@@ -2481,7 +2481,15 @@
                     }
                     renderPanel('checkin');
                     updateTravelerBar();
+                };
+                // 回车键直接提交（任务名或时长输入框均可）
+                document.getElementById('taskInput')?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); doCheckin(); }
                 });
+                document.getElementById('durInput')?.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); doCheckin(); }
+                });
+                document.getElementById('btnCheckin')?.addEventListener('click', doCheckin);
 
                 document.getElementById('btnClearAll')?.addEventListener('click', () => {
                     const cnt = clearTodayCheckins();
