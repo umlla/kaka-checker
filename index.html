@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script>
     (function() {
-        var v = '2025.06.15-4';
+        var v = '2026.9.14-v1';
         if (localStorage.getItem('ka_ver') !== v) {
         localStorage.setItem('ka_ver', v);
         location.reload(true);
@@ -1031,9 +1031,19 @@
             weatherRate: { appliedAt: 0, temp: 1, mood: 1, health: 1, hunger: 1, currentWeather: '' }
         });
         // 安瑟 NPC 状态（任务/支线线索），持久化在旅行者存档中
-        if (typeof travelerState.quests === 'undefined') travelerState.quests = [];
-        if (typeof travelerState.anserCtx === 'undefined' || typeof travelerState.anserCtx !== 'object' || Array.isArray(travelerState.anserCtx)) {
-            travelerState.anserCtx = { lastTaskAt: 0, lastTaskTitle: '', offeredAt: 0, pending: null };
+        // 归一化安瑟任务上下文：兼容旧版单任务存档，并补全每日接任务计数
+        normalizeAnserCtx();
+        function normalizeAnserCtx() {
+            if (!travelerState.anserCtx || typeof travelerState.anserCtx !== 'object' || Array.isArray(travelerState.anserCtx)) {
+                travelerState.anserCtx = { pending: [], acceptCount: 0, acceptDate: '' };
+            }
+            const ctx = travelerState.anserCtx;
+            if (!Array.isArray(ctx.pending)) {
+                // 旧存档：pending 可能是单个任务对象或 null，统一转为数组
+                ctx.pending = ctx.pending ? [ctx.pending] : [];
+            }
+            if (typeof ctx.acceptCount !== 'number') ctx.acceptCount = 0;
+            if (typeof ctx.acceptDate !== 'string') ctx.acceptDate = '';
         }
         // 帐篷系统初始化：兼容旧存档，根据已有连续天数直接设置帐篷等级
         (function initTentOnUpgrade() {
@@ -1265,10 +1275,7 @@
             if (travelerState.lastStreak === undefined) travelerState.lastStreak = 0;
             if (!travelerState.backpack) travelerState.backpack = [];
             if (!travelerState.log) travelerState.log = [];
-            if (!travelerState.quests) travelerState.quests = [];
-            if (!travelerState.anserCtx || typeof travelerState.anserCtx !== 'object' || Array.isArray(travelerState.anserCtx)) {
-                travelerState.anserCtx = { lastTaskAt: 0, lastTaskTitle: '', offeredAt: 0, pending: null };
-            }
+            normalizeAnserCtx();
 
             // userData 补全
             if (!userData.weeklyEggClaimed && userData.weeklyEggClaimed !== null) userData.weeklyEggClaimed = null;
@@ -1336,8 +1343,11 @@
         }
 
         // ==================== 安瑟 NPC：任务发放与结算 ====================
-        const ANSER_COOLDOWN_SEC = 15 * 60;      // 两次主动派发任务最小间隔
         const ANSER_RESCUE_HEALTH = 20;           // 健康低于此值时，安瑟发布补给型支线
+        const ANSER_DAILY_LIMIT = 10;             // 每天最多主动接取任务的次数（绝境时解除限制）
+        const ANSER_MAX_PENDING = 3;              // 最多同时进行中的任务数
+        // 每种任务类型最多同时进行几个（连续打卡任务最多 1 个）
+        const ANSER_MAX_PER_GOAL = { streak: 1 };
         const ANSER_QUEST_POOL = [
             // 专注 25 分钟 → 一次性治疗药膏
             {
@@ -1362,9 +1372,45 @@
                 desc: "在该任务进行的时段内，完成 1 条以上的打卡",
                 goal: 'checkin', need: 1,
                 rewards: [{ name: "指南针", qty: 1 }]
+            },
+            // 新增：专注 45 分钟 → 稀有物品
+            {
+                title: "陪旅行者沉下心来",
+                desc: "完成一个 45 分钟的番茄钟（专注计时）",
+                goal: 'focus', need: 45 * 60,
+                rewards: [
+                    { name: "保温水壶", qty: 1 },
+                    { name: "暖石", qty: 1 }
+                ]
+            },
+            // 新增：单次打卡 → 通用补给
+            {
+                title: "留下第一道足迹",
+                desc: "在今日打卡里记满 1 条",
+                goal: 'checkin', need: 1,
+                rewards: [
+                    { name: "干粮块", qty: 1 },
+                    { name: "励志纸条", qty: 1 }
+                ]
+            },
+            // 新增：连续打卡 3 天 → 稀有物资（此类型最多同时 1 个）
+            {
+                title: "守望三天风雪",
+                desc: "连续打卡 3 天（今天也要算上哦）",
+                goal: 'streak', need: 3,
+                rewards: [
+                    { name: "保温睡袋", qty: 1 },
+                    { name: "治疗药膏", qty: 1 }
+                ]
             }
         ];
-        // 根据旅行者状况挑选一条安瑟派发的任务；若无则返回 null
+        // 旅行者是否处于绝境（任一属性跌破阈值即视为陷入绝境）
+        // 旅行者是否处于绝境（任一属性跌破阈值即视为陷入绝境）
+        function travelerInDespair() {
+            return travelerState.hunger <= 8 || travelerState.mood <= 8 ||
+                   travelerState.health <= 18 || travelerState.temperature <= -28;
+        }
+        // 根据旅行者状况挑选一条安瑟派发的任务；若无可接类型则返回 null
         function anserOfferTask() {
             const t = travelerState;
             // 生命垂危时优先发布补给支线
@@ -1372,76 +1418,100 @@
                 return {
                     title: "救急补给",
                     desc: "完成一个 10 分钟以上的番茄钟，为旅行者换一份热食",
-                    goal: 'focus', need: 10 * 60, urgent: true,
+                    goal: 'focus', need: 10 * 60,
                     rewards: [
                         { name: "干粮块", qty: 2 },
                         { name: "治疗药膏", qty: 1 }
                     ]
                 };
             }
-            return ANSER_QUEST_POOL[Math.floor(Math.random() * ANSER_QUEST_POOL.length)];
+            const pending = travelerState.anserCtx.pending;
+            // 过滤掉已达同类型上限的任务（如连续打卡任务最多同时 1 个）
+            const candidates = ANSER_QUEST_POOL.filter(q =>
+                pending.filter(p => p.goal === q.goal).length < (ANSER_MAX_PER_GOAL[q.goal] ?? Infinity)
+            );
+            return randChoice(candidates);
         }
         // 结算：根据任务目标返回是否达成
-        function checkAnserQuestDone(quest, goalType) {
-            if (quest.goal === 'focus') {
-                return (Date.now() - quest.startedAt) / 1000 >= quest.need;
-            }
-            if (quest.goal === 'checkin') {
-                const today = getToday();
-                return (userData.checkins[today] || []).length >= quest.need;
-            }
+        function checkAnserQuestDone(quest, minutes = 0) {
+            if (quest.goal === 'focus') return minutes >= quest.need / 60;
+            if (quest.goal === 'checkin') return (userData.checkins[getToday()] || []).length >= quest.need;
+            if (quest.goal === 'streak') return calcStats().streak >= quest.need;
             return false;
         }
-        // 结算任务：达成则发奖，并可从安瑟处接下一次
+        // 结算任务：达成则发奖
         function settleAnserQuest(goalType, minutes = 0) {
             const ctx = travelerState.anserCtx;
-            if (!ctx || !ctx.pending) return;
-            const quest = ctx.pending;
-            if (quest.goal !== goalType) return;
+            if (!ctx || !ctx.pending.length) return;
 
-            // 针对专注任务，用累计分钟判定；通过 startedAt 兜底
-            let done = false;
-            if (quest.goal === 'focus') {
-                done = minutes >= quest.need / 60;
-            } else {
-                done = checkAnserQuestDone(quest, goalType);
-            }
-            if (!done) return;
+            let settled = false;
+            // 遍历当前所有进行中的任务，结算与该事件匹配的
+            for (let i = ctx.pending.length - 1; i >= 0; i--) {
+                const quest = ctx.pending[i];
+                if (quest.goal !== goalType || !checkAnserQuestDone(quest, minutes)) continue;
 
-            // 发奖：优先旅行者背包，满了进用户背包
-            const granted = [];
-            for (const r of quest.rewards || []) {
-                grantItemToTraveler(r.name, r.qty || 1);
-                granted.push(r.name);
+                // 发奖：优先旅行者背包，满了进用户背包
+                const granted = [];
+                for (const r of quest.rewards || []) {
+                    grantItemToTraveler(r.name, r.qty || 1);
+                    granted.push(r.name);
+                }
+                pushTravelerLog(`${nowTimeStr()} ✨ 安瑟任务的奖励已送达：${quest.title} → ${granted.join('、')}。`);
+                showToast(`✨ 安瑟任务的奖励已送达：${granted.join('、')}`, 3500);
+                ctx.pending.splice(i, 1);
+                settled = true;
             }
-            pushTravelerLog(`${nowTimeStr()} ✨ 安瑟任务的奖励已送达：${granted.join('、')}。`);
-            showToast(`✨ 安瑟任务的奖励已送达：${granted.join('、')}`, 3500);
-            travelerState.quests = (travelerState.quests || []).filter(q => q.startedAt !== quest.startedAt);
-            ctx.pending = null;
-            ctx.lastTaskAt = Date.now();
-            ctx.lastTaskTitle = quest.title;
+            if (!settled) return;
+
             forceSaveAll();
             renderPanel('checkin'); // 刷新，便于展示入包信息
             updateTravelerBar();
-            return;
         }
 
-        // 尝试从安瑟处接任务；已被接取/正在冷却则返回相应提示
+        // 今日已接任务次数（跨天自动清零）
+        function anserAcceptCountToday() {
+            const ctx = travelerState.anserCtx;
+            const today = getToday();
+            if (ctx.acceptDate !== today) {
+                ctx.acceptDate = today;
+                ctx.acceptCount = 0;
+            }
+            return ctx.acceptCount;
+        }
+        // 尝试从安瑟处接任务；有进行中任务/超限额/超次数则返回相应提示
         function anserAcceptTask() {
             const ctx = travelerState.anserCtx;
-            if (ctx.pending) return { ok: false, msg: `喵，你已经接了「${ctx.pending.title}」，先去忙完再回来找我吧～` };
-            const now = Date.now();
-            if (now - (ctx.lastTaskAt || 0) < ANSER_COOLDOWN_SEC * 1000) {
-                const remain = Math.max(0, Math.ceil((ANSER_COOLDOWN_SEC * 1000 - (now - (ctx.lastTaskAt || 0))) / 60000));
-                return { ok: false, msg: `喵，安瑟过会儿才有新差事，${remain} 分钟后再来找我喵～` };
-            }
+            const inDespair = travelerInDespair();
+
             const quest = anserOfferTask();
-            ctx.pending = { ...quest, startedAt: now };
-            ctx.offeredAt = now;
+            if (!quest) {
+                return { ok: false, msg: '喵，安瑟想了一圈，暂时想不出新差事了喵……' };
+            }
+            // 每日接任务次数已达上限（绝境时不受限制）
+            if (!inDespair && anserAcceptCountToday() >= ANSER_DAILY_LIMIT) {
+                return { ok: false, msg: `喵，今天安瑟能帮的忙就到这啦（已经接了 ${ANSER_DAILY_LIMIT} 次），明天再来找我吧～` };
+            }
+            // 同时进行中的任务已达上限（绝境时不受限制）
+            if (!inDespair && ctx.pending.length >= ANSER_MAX_PENDING) {
+                return { ok: false, msg: `喵，你手头的差事已经够多了（最多 ${ANSER_MAX_PENDING} 个），先完成再去接新的吧～` };
+            }
+            const now = Date.now();
+            ctx.pending.push({ ...quest, startedAt: now });
+            ctx.acceptCount++;
             forceSaveAll();
-            return { ok: true, quest };
+            return { ok: true, quest, pendingCount: ctx.pending.length, acceptCount: ctx.acceptCount };
         }
-        
+        // 查看当前已接任务（用于“查看任务”等指令）
+        function anserListTasks() {
+            const ctx = travelerState.anserCtx;
+            const pending = ctx.pending;
+            if (!pending.length) return '喵，旅行者现在没有接下任何差事哦，对我说“接任务”就能领一份～';
+            const list = pending.map((q, i) => `${i + 1}. 「${q.title}」：${q.desc}`).join('；');
+            const inDespair = travelerInDespair();
+            const left = Math.max(0, ANSER_DAILY_LIMIT - anserAcceptCountToday());
+            const quota = inDespair ? '（绝境中，今日不限次数）' : `（今日还可接 ${left} 次）`;
+            return `喵，你已接下 ${pending.length}/${ANSER_MAX_PENDING} 个差事${quota}：${list}。`;
+        }
         // ==================== 旅行者状态 ====================
         function updateTravelerState(nowSec = Date.now()/1000) {
             const elapsed = nowSec - (travelerState.lastUpdate || nowSec);
@@ -2849,10 +2919,11 @@ function escapeChatHtml(str) {
                 const statusLine = statusParts.length ? '，' + statusParts.join('，') : '，状态一般';
                 const sceneDesc = wInfo.scene || '';
                 // 安瑟派发任务线索
-                const ctxA = travelerState.anserCtx || {};
+                const ctxA = travelerState.anserCtx;
                 let questLine = '';
-                if (ctxA.pending) {
-                    questLine = `。你已接下任务「${ctxA.pending.title}」：${ctxA.pending.desc}。`;
+                if (ctxA.pending.length) {
+                    const titles = ctxA.pending.map(q => `「${q.title}」：${q.desc}`).join('；');
+                    questLine = `。你已接下 ${ctxA.pending.length} 个差事——${titles}。`;
                 } else {
                     questLine = '。你可以主动对安瑟说“接任务”来领取差事，完成后旅行者会得到奖励。';
                 }
@@ -2868,13 +2939,17 @@ function escapeChatHtml(str) {
 
                 // 安瑟 NPC：接任务 / 查看当前任务（本地处理，不发请求）
                 const qq = text.replace(/[，。！？,.!?""''\s]/g, '').toLowerCase();
-                if (qq.includes('接任务') || qq.includes('接差事') || qq.includes('接活') || qq.includes('任务')) {
+                // 小猫的统一回复包装（带猫头图标 + 转义）
+                const catSay = (msg) => addMessage('bot', `<span class="cat-icon">🐱</span>${escapeChatHtml(msg)}`);
+                if (qq.includes('接任务') || qq.includes('接差事') || qq.includes('接活')) {
                     const res = anserAcceptTask();
-                    if (res.ok) {
-                        addMessage('bot', `<span class="cat-icon">🐱</span>${escHtml(`喵，正好有差事交给你——「${res.quest.title}」：${res.quest.desc}。办成之后旅行者会收到奖励哦。`)}`);
-                    } else {
-                        addMessage('bot', `<span class="cat-icon">🐱</span>${escHtml(res.msg)}`);
-                    }
+                    catSay(res.ok
+                        ? `喵，正好有差事交给你——「${res.quest.title}」：${res.quest.desc}。办成之后旅行者会收到奖励哦。今天已接 ${res.acceptCount}/${ANSER_DAILY_LIMIT} 次，手头还有 ${res.pendingCount}/${ANSER_MAX_PENDING} 个差事在办。`
+                        : res.msg);
+                    return;
+                }
+                if (qq.includes('查看任务') || qq.includes('已接任务') || qq.includes('我的任务') || qq.includes('任务列表') || qq === '任务' || qq === '查任务') {
+                    catSay(anserListTasks());
                     return;
                 }
 
