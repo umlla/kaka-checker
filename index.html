@@ -46,6 +46,7 @@ body{
 .stat.food.empty{color:var(--red);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 .stat.lv{color:var(--gold);margin-left:auto}
+.ver{font-size:10.5px;color:#4e6b59;font-variant-numeric:tabular-nums}
 
 .grid{display:grid;grid-template-columns:1.05fr 1fr;gap:12px}
 @media(max-width:760px){.grid{grid-template-columns:1fr}}
@@ -205,7 +206,7 @@ button:disabled{opacity:.28;cursor:not-allowed}
     <div class="stat food" id="foodStat"><span class="ico">🍚</span><span id="food">100</span></div>
     <div class="stat mood"><span class="ico">💚</span><span id="mood">100</span></div>
     <div class="stat weather"><span class="ico" id="wicon">☀️</span><span id="wname">晴</span></div>
-    <div class="stat lv">Lv.<span id="level">1</span></div>
+    <div class="stat lv">Lv.<span id="level">1</span> <span class="ver" id="verTag"></span></div>
   </header>
 
   <main class="grid">
@@ -266,9 +267,15 @@ button:disabled{opacity:.28;cursor:not-allowed}
 
 <script>
 /* ============================================================
+   版本控制 / 存档键
+============================================================ */
+const SAVE_KEY       = 'frog_idle_v6';
+const SAVE_VERSION   = 7;
+const LEGACY_KEYS    = ['frog_idle_v5', 'frog_idle_v4', 'frog_idle_v3', 'frog_idle_v2', 'frog_idle_v1'];
+
+/* ============================================================
    工具
 ============================================================ */
-const SAVE_KEY = 'frog_idle_v6';
 const BAG_CAP = 8;
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const rnd = (a,b) => a + Math.random()*(b-a);
@@ -341,7 +348,7 @@ const RECOVER_POSE = { id:'recover', icon:'💤', text:'小蛙缩在窝里，慢
 /* 基础产出 0.2/秒 */
 const BASE_RATE = 0.2;
 
-/* 设施：高阶每级加成更大，性价比也更高 */
+/* 设施 */
 const UPGRADES = [
   { id:'moss',    name:'苔藓地毯', icon:'🟩', base:30,     rate:0.05,  desc:'每秒 +0.05 🍀' },
   { id:'pond',    name:'后院小池', icon:'💧', base:250,    rate:0.5,   desc:'每秒 +0.5 🍀' },
@@ -434,63 +441,100 @@ const AUTO_FEEDER_RATE = 0.03;
 const AUTO_FEEDER_FOOD = 0.45;
 const FOOD_TICK = 0.25;
 
-/* 旅行相关阈值 */
 const TRIP_FOOD_TICK   = 0.15;
 const TRIP_MOOD_TICK   = 0.02;
 const TRIP_NEED_MOOD   = 40;
 const TRIP_NEED_FOOD   = 30;
 
-/* 恢复期：提前回家后不能马上再出门 */
 const RECOVER_TIME       = 150;
 const RECOVER_MOOD_RATE  = 0.22;
 const RECOVER_FOOD_RATE  = 0.14;
 
-/* 在家低状态自然缓慢回复 */
 const HOME_RECOVER_MOOD = 0.12;
 const HOME_RECOVER_FOOD = 0.05;
 
-/* 单次 tick 最多补偿的秒数（覆盖后台休眠） */
 const MAX_TICK = 3600;
 
 /* ============================================================
    地点 / 事件
+   明信片文案全部改用蛙蛙的第一人称「我」
 ============================================================ */
 const PLACES = [
-  { name:'青苔石阶',   emoji:'🪨', lines:['石阶上铺满软软的青苔，踩上去一点声音也没有。','你在这里坐了很久，看蚂蚁把一粒米搬回家。'] },
-  { name:'旧书店角落', emoji:'📚', lines:['书页里夹着前一个读者留下的三叶草，已经压干了。','你读到一半就睡着了，醒来时窗外下起了雨。'] },
-  { name:'海边灯塔',   emoji:'🗼', lines:['灯塔的光每十二秒转一圈，你数到第一百圈。','海风把帽子吹走了，你追了很久，最后笑了。'] },
-  { name:'竹林深处',   emoji:'🎋', lines:['竹叶沙沙响，像有人在很远的地方说话。','你捡到一根很直的竹枝，说要带回家。'] },
-  { name:'雪国车站',   emoji:'🚉', lines:['末班车开走了，站台上只剩你和一盏灯。','你在长椅上留下一枚硬币，给下一个赶路的人。'] },
-  { name:'屋顶水塔',   emoji:'🏙️', lines:['从这里能看见整座城市的灯，一盏一盏亮起来。','你把脚悬在边上晃，风从脚趾缝里穿过去。'] },
-  { name:'野花坡',     emoji:'🌼', lines:['坡上开满不知名的小花，你打了一个很长的滚。','你采了一朵最小的，夹在信里带回来。'] },
-  { name:'废弃游乐园', emoji:'🎠', lines:['旋转木马还在转，只是没有音乐了。','你在售票亭里躲雨，发现一本过期的日历。'] },
-  { name:'面包店后巷', emoji:'🥐', lines:['烤箱的味道从后门飘出来，热乎乎的。','老板娘给了你一个刚出炉的边角，你说谢谢。'] },
-  { name:'雾中湖泊',   emoji:'🌊', lines:['雾很厚，看不见对岸，但你听见了水鸟。','你在湖边站了很久，直到雾散了一点点。'] },
-  { name:'老树洞',     emoji:'🌳', lines:['树洞里住着一只松鼠，你们交换了礼物。','你在树洞里睡了一觉，醒来觉得世界很轻。'] },
-  { name:'夜行列车',   emoji:'🚃', lines:['车厢里只有你和打瞌睡的列车员。','窗外掠过的灯一盏都不属于你，但你很喜欢。'] },
-  { name:'山顶邮局',   emoji:'📮', lines:['你在这里寄了一封信，收件人写的是「明年」。','邮戳盖歪了，你说这样才好看。'] },
-  { name:'雨中小摊',   emoji:'🍢', lines:['摊主多给了你一串，说下雨天生意不好。','你蹲在棚子下面，看雨把世界泡软。'] },
-  { name:'图书馆天台', emoji:'🌤️', lines:['云很低，你伸手好像能摸到。','你在这里吹了一下午的风，什么也没做。'] },
-  { name:'萤火虫溪谷', emoji:'✨', lines:['天黑以后，溪边亮起几百个小光点。','你跟着一只萤火虫走了很远，然后它飞走了。'] },
-  { name:'海边旧船',   emoji:'⛵', lines:['船身裂了缝，里面长出一棵小树。','你在船头刻下自己的名字，又把它划掉了。'] },
-  { name:'清晨菜市',   emoji:'🧺', lines:['你买到一颗特别圆的番茄，舍不得吃。','卖菜阿姨说「小青蛙又来啦」，你点点头。'] },
-  { name:'飘雪的温泉', emoji:'♨️', lines:['雪落在水面上就化了，你泡得手指发皱。','你说这是今年最舒服的一个下午。'] },
-  { name:'荒原风车',   emoji:'🌀', lines:['风车转得很慢，像在数什么东西。','你靠着塔身睡着了，梦里也在转。'] },
+  { name:'青苔石阶',   emoji:'🪨', lines:[
+    '石阶上铺满软软的青苔，我踩上去一点声音也没有。',
+    '我在这里坐了很久，看蚂蚁把一粒米搬回家。'] },
+  { name:'旧书店角落', emoji:'📚', lines:[
+    '书页里夹着前一个读者留下的三叶草，已经压干了。',
+    '我读到一半就睡着了，醒来时窗外下起了雨。'] },
+  { name:'海边灯塔',   emoji:'🗼', lines:[
+    '灯塔的光每十二秒转一圈，我数到第一百圈。',
+    '海风把我的帽子吹走了，我追了很久，最后笑了。'] },
+  { name:'竹林深处',   emoji:'🎋', lines:[
+    '竹叶沙沙响，像有人在很远的地方说话。',
+    '我捡到一根很直的竹枝，想带回家。'] },
+  { name:'雪国车站',   emoji:'🚉', lines:[
+    '末班车开走了，站台上只剩我和一盏灯。',
+    '我在长椅上留下一枚硬币，给下一个赶路的人。'] },
+  { name:'屋顶水塔',   emoji:'🏙️', lines:[
+    '从这里能看见整座城市的灯，一盏一盏亮起来。',
+    '我把脚悬在边上晃，风从脚趾缝里穿过去。'] },
+  { name:'野花坡',     emoji:'🌼', lines:[
+    '坡上开满不知名的小花，我打了一个很长的滚。',
+    '我采了一朵最小的，夹在信里带回来。'] },
+  { name:'废弃游乐园', emoji:'🎠', lines:[
+    '旋转木马还在转，只是没有音乐了。',
+    '我在售票亭里躲雨，发现一本过期的日历。'] },
+  { name:'面包店后巷', emoji:'🥐', lines:[
+    '烤箱的味道从后门飘出来，热乎乎的。',
+    '老板娘给了我一个刚出炉的边角，我说谢谢。'] },
+  { name:'雾中湖泊',   emoji:'🌊', lines:[
+    '雾很厚，看不见对岸，但我听见了水鸟。',
+    '我在湖边站了很久，直到雾散了一点点。'] },
+  { name:'老树洞',     emoji:'🌳', lines:[
+    '树洞里住着一只松鼠，我们交换了礼物。',
+    '我在树洞里睡了一觉，醒来觉得世界很轻。'] },
+  { name:'夜行列车',   emoji:'🚃', lines:[
+    '车厢里只有我和打瞌睡的列车员。',
+    '窗外掠过的灯一盏都不属于我，但我很喜欢。'] },
+  { name:'山顶邮局',   emoji:'📮', lines:[
+    '我在这里寄了一封信，收件人写的是「明年」。',
+    '邮戳盖歪了，我说这样才好看。'] },
+  { name:'雨中小摊',   emoji:'🍢', lines:[
+    '摊主多给了我一串，说下雨天生意不好。',
+    '我蹲在棚子下面，看雨把世界泡软。'] },
+  { name:'图书馆天台', emoji:'🌤️', lines:[
+    '云很低，我伸手好像能摸到。',
+    '我在这里吹了一下午的风，什么也没做。'] },
+  { name:'萤火虫溪谷', emoji:'✨', lines:[
+    '天黑以后，溪边亮起几百个小光点。',
+    '我跟着一只萤火虫走了很远，然后它飞走了。'] },
+  { name:'海边旧船',   emoji:'⛵', lines:[
+    '船身裂了缝，里面长出一棵小树。',
+    '我在船头刻下自己的名字，又把它划掉了。'] },
+  { name:'清晨菜市',   emoji:'🧺', lines:[
+    '我买到一颗特别圆的番茄，舍不得吃。',
+    '卖菜阿姨说「小青蛙又来啦」，我点点头。'] },
+  { name:'飘雪的温泉', emoji:'♨️', lines:[
+    '雪落在水面上就化了，我泡得手指发皱。',
+    '我说这是今年最舒服的一个下午。'] },
+  { name:'荒原风车',   emoji:'🌀', lines:[
+    '风车转得很慢，像在数什么东西。',
+    '我靠着塔身睡着了，梦里也在转。'] },
 ];
 
 const TRIP_EVENTS = [
-  '你在路上遇到一只迷路的瓢虫，把它送回了叶子背面。',
-  '你的帽子被风吹走了，追了三条街。',
-  '你在一棵树下打了个盹，梦见自己会飞。',
-  '你和一个背着行囊的蜗牛交换了路线图。',
-  '你在水洼里照见自己，觉得今天还挺好看。',
-  '你捡到一枚生锈的钥匙，不知道能开什么。',
-  '你被一只蝴蝶带路，绕了很远很远。',
-  '你在桥下躲雨，听了一首别人哼的歌。',
-  '你把口袋里的面包分给了三只麻雀。',
-  '你在路边发现一朵开错季节的花。',
-  '你数了数路过的云，一共十七朵。',
-  '你在一扇门前站了很久，最后没有敲。',
+  '小蛙在路上遇到一只迷路的瓢虫，把它送回了叶子背面。',
+  '小蛙的帽子被风吹走了，追了三条街。',
+  '小蛙在一棵树下打了个盹，梦见自己会飞。',
+  '小蛙和一个背着行囊的蜗牛交换了路线图。',
+  '小蛙在水洼里照见自己，觉得今天还挺好看。',
+  '小蛙捡到一枚生锈的钥匙，不知道能开什么。',
+  '小蛙被一只蝴蝶带路，绕了很远很远。',
+  '小蛙在桥下躲雨，听了一首别人哼的歌。',
+  '小蛙把口袋里的面包分给了三只麻雀。',
+  '小蛙在路边发现一朵开错季节的花。',
+  '小蛙数了数路过的云，一共十七朵。',
+  '小蛙在一扇门前站了很久，最后没有敲。',
 ];
 
 const HOME_EVENTS = [
@@ -509,6 +553,7 @@ const HOME_EVENTS = [
 ============================================================ */
 function defaultState(){
   return {
+    version: SAVE_VERSION,
     clovers: 0,
     totalClovers: 0,
     mood: 100,
@@ -934,8 +979,6 @@ function loop(){
   let dt = (now - lastTick) / 1000;
   lastTick = now;
 
-  /* 后台休眠回来时，dt 可能非常大，一次性补偿。
-     上限 1 小时，超过的走离线逻辑（applyOffline）。 */
   if(dt > MAX_TICK) dt = MAX_TICK;
   if(dt > 0.05) tick(dt);
   render();
@@ -1333,35 +1376,102 @@ function renderAlbum(){
 }
 
 /* ============================================================
-   存档
+   存档 / 版本迁移
 ============================================================ */
 function save(){
+  state.version = SAVE_VERSION;
   state.lastSave = Date.now();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e){}
 }
 
+/* 把旧版本的数据补齐到当前结构 */
+function migrateSave(data){
+  const from = Number(data.version) || 1;
+
+  /* v1 → v2：饱食度、自动喂食器 */
+  if(from < 2){
+    if(typeof data.food !== 'number') data.food = 100;
+    if(typeof data.hasAutoFeeder !== 'boolean') data.hasAutoFeeder = false;
+    if(typeof data.autoFeed !== 'boolean') data.autoFeed = false;
+  }
+
+  /* v2 → v3：行囊、装备 */
+  if(from < 3){
+    if(!Array.isArray(data.bag)) data.bag = [];
+    if(!data.gear) data.gear = { cloth:0, food:0, house:0, travel:0 };
+  }
+
+  /* v3 → v4：姿态 */
+  if(from < 4){
+    if(!data.frog) data.frog = {};
+    if(!data.frog.pose) data.frog.pose = 'nap';
+    if(typeof data.frog.poseTimer !== 'number') data.frog.poseTimer = 60;
+    if(!Array.isArray(data.frog.bag)) data.frog.bag = [];
+  }
+
+  /* v4 → v5：移除任务系统 */
+  if(from < 5){
+    delete data.task;
+  }
+
+  /* v5 → v6：恢复期 */
+  if(from < 6){
+    if(!data.frog) data.frog = {};
+    if(typeof data.frog.recovering !== 'boolean') data.frog.recovering = false;
+    if(typeof data.frog.recoverTimer !== 'number') data.frog.recoverTimer = 0;
+  }
+
+  /* v6 → v7：明信片文案更新，只是加版本号，结构不变 */
+  if(from < 7){
+    /* nothing structural */
+  }
+
+  data.version = SAVE_VERSION;
+  return data;
+}
+
 function load(){
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    /* 先读当前 key，读不到再按顺序尝试旧 key */
+    let raw = localStorage.getItem(SAVE_KEY);
+    let fromKey = SAVE_KEY;
+    if(!raw){
+      for(const k of LEGACY_KEYS){
+        const v = localStorage.getItem(k);
+        if(v){ raw = v; fromKey = k; break; }
+      }
+    }
     if(!raw) return false;
-    const data = JSON.parse(raw);
+
+    let data = JSON.parse(raw);
+    const originalVersion = Number(data.version) || 1;
+
+    data = migrateSave(data);
+
     state = Object.assign(defaultState(), data);
     state.frog = Object.assign(defaultState().frog, data.frog || {});
     state.gear = Object.assign({ cloth:0, food:0, house:0, travel:0 }, data.gear || {});
     state.stats = Object.assign({ trips:0, events:0, fed:0 }, data.stats || {});
-    if(typeof state.food !== 'number') state.food = 100;
-    if(typeof state.hasAutoFeeder !== 'boolean') state.hasAutoFeeder = false;
-    if(typeof state.autoFeed !== 'boolean') state.autoFeed = false;
+
     if(!Array.isArray(state.bag)) state.bag = [];
     if(!Array.isArray(state.logs)) state.logs = [];
     if(!Array.isArray(state.postcards)) state.postcards = [];
     if(!Array.isArray(state.frog.bag)) state.frog.bag = [];
-    if(typeof state.frog.recovering !== 'boolean') state.frog.recovering = false;
-    if(typeof state.frog.recoverTimer !== 'number') state.frog.recoverTimer = 0;
     if(!state.frog.pose || !POSES.find(p => p.id === state.frog.pose)){
       state.frog.pose = 'nap';
       state.frog.poseTimer = 60;
     }
+
+    /* 从旧 key 迁移过来时，写回新 key，并清掉旧的 */
+    if(fromKey !== SAVE_KEY){
+      try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch(e){}
+      try { localStorage.removeItem(fromKey); } catch(e){}
+      state._migratedFrom = fromKey;
+      state._migratedVersion = originalVersion;
+    } else if(originalVersion < SAVE_VERSION){
+      state._migratedVersion = originalVersion;
+    }
+
     return true;
   } catch(e){
     state = defaultState();
@@ -1460,13 +1570,9 @@ function bindUI(){
     startTrip();
   });
 
-  /* 切后台时保存；切回前台立即结算一次，避免等 setInterval */
   document.addEventListener('visibilitychange', () => {
-    if(document.hidden){
-      save();
-    } else {
-      loop();
-    }
+    if(document.hidden) save();
+    else loop();
   });
   window.addEventListener('beforeunload', save);
 }
@@ -1489,6 +1595,13 @@ function init(){
   state.perSecond = computePerSecond();
   applyOffline();
 
+  /* 顶栏版本标记 */
+  const verTag = $('#verTag');
+  if(verTag){
+    verTag.textContent = 'v' + SAVE_VERSION;
+    verTag.title = '存档版本 v' + SAVE_VERSION;
+  }
+
   buildShop();
   buildLife();
   bindUI();
@@ -1496,9 +1609,15 @@ function init(){
   if(isNew){
     addLog('欢迎来到蛙居小院。小院会自己长出三叶草，小蛙会出门旅行。', 'good');
     addLog('出门在外它会自己照顾自己，玩够了就回家歇歇。', 'info');
+  } else if(state._migratedFrom){
+    addLog('从旧存档（' + state._migratedFrom + '）迁移到 v' + SAVE_VERSION + ' 完成。', 'info');
+  } else if(state._migratedVersion && state._migratedVersion < SAVE_VERSION){
+    addLog('存档已升级：v' + state._migratedVersion + ' → v' + SAVE_VERSION + '。', 'info');
   } else {
     addLog('小蛙抬起头看了你一眼。', 'info');
   }
+  delete state._migratedFrom;
+  delete state._migratedVersion;
 
   lastTick = Date.now();
   render();
